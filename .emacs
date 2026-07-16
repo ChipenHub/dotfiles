@@ -25,33 +25,6 @@
         ("melpa" . "https://melpa.org/packages/")))
 (package-initialize)
 
-;; magit config
-(with-eval-after-load 'magit
-  (setq magit-diff-refine-hunk 'all)
-  (setq magit-diff-fontify-hunk 'all)
-  (set-face-attribute 'magit-diff-file-heading nil
-                      :weight 'bold
-                      :height 1.1)
-  (set-face-attribute 'magit-diff-hunk-heading nil
-                      :weight 'bold)
-  (set-face-attribute 'magit-diff-hunk-heading-highlight nil
-                      :weight 'bold))
-
-(with-eval-after-load 'magit
-  (set-face-attribute 'magit-section-heading nil
-                      :weight 'bold
-                      :height 1.15)
-
-  (set-face-attribute 'magit-diff-file-heading nil
-                      :weight 'bold
-                      :height 1.15)
-
-  (set-face-attribute 'magit-branch-local nil
-                      :weight 'bold)
-
-  (set-face-attribute 'magit-branch-remote nil
-                      :weight 'bold))
-
 ;; initial fragment config
 (add-to-list 'default-frame-alist '(width . 200))
 (add-to-list 'default-frame-alist '(height . 50))
@@ -72,35 +45,46 @@
 (tool-bar-mode 0)
 (column-number-mode 1)
 
-;; close lines number;
-(dolist (hook '(magit-mode-hook
-                dired-mode-hook
-                vterm-mode-hook
-                shell-mode-hook
-                compilation-mode-hook))
-  (add-hook hook
-            (lambda ()
-              (display-line-numbers-mode -1))))
-
-;; vertico
-(use-package vertico
-  :ensure t
-  :init
-  (vertico-mode 1))
-
-;; marginalia
+;; marginalia note of cordination
 (use-package marginalia
   :ensure t
   :init
-  (marginalia-mode 1))
+  (marginalia-mode))
 
-;; Consult search
+;; srolling~
+(pixel-scroll-precision-mode 1)
+(use-package ultra-scroll
+  :ensure t
+  :init
+  (ultra-scroll-mode 1))
+
+;; divider
+(setq window-divider-default-right-width 2)
+(setq window-divider-default-bottom-width 2)
+(window-divider-mode 1)
+
+;; ido everywhere
+(require 'ido)
+
+(setq ido-enable-flex-matching t
+      ido-everywhere t
+      ido-case-fold t
+      ido-use-virtual-buffers t
+      ido-create-new-buffer 'always)
+(ido-mode 1)
+(recentf-mode 1)
+(global-set-key (kbd "C-x b") #'ido-switch-buffer)
+(global-set-key (kbd "C-x 4 b") #'ido-switch-buffer-other-window)
+(global-set-key (kbd "C-x 5 b") #'ido-switch-buffer-other-frame)
+
+;; enhance find: consult
+;; Consult
 (use-package consult
   :ensure t
   :bind
-  (("C-x b"   . consult-buffer)
-   ("C-s"     . consult-line)
+  (("C-s"     . consult-line)
+   ("M-g g"   . consult-goto-line)
    ("M-g i"   . consult-imenu)
    ("M-y"     . consult-yank-pop)
    ("C-c r"   . consult-ripgrep)
-   ("C-x C-r" . consult-recent-file)))
+   ("C-c f"   . consult-find)))
