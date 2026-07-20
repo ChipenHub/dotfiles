@@ -1,6 +1,15 @@
 # Added by trae-cli installer
 fish_add_path /Users/bytedance/.local/bin
 
+# especiallly for emacs's compile-mode
+function rt
+    readtags $argv | awk -F '\t' '{
+        line = $3
+        sub(/;".*/, "", line)
+        print $2 ":" line ":" $1
+    }'
+end
+
 # command replacements
 abbr -a cd 'z'
 abbr -a find 'fd'
