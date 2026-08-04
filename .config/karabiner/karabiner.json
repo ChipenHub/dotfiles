@@ -60,6 +60,19 @@
                         ]
                     },
                     {
+                        "description": "Control-G sends Escape",
+                        "manipulators": [
+                            {
+                                "from": {
+                                    "key_code": "g",
+                                    "modifiers": { "mandatory": ["control"] }
+                                },
+                                "to": [{ "key_code": "escape" }],
+                                "type": "basic"
+                            }
+                        ]
+                    },
+                    {
                         "description": "Control-N/P move vertically",
                         "manipulators": [
                             {
