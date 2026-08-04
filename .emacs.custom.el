@@ -8,7 +8,8 @@
      default))
  '(package-selected-packages
    '(## ace-window consult ghostel gruber-darker-theme kotlin-mode magit
-        marginalia multi-vterm swift-mode ultra-scroll vterm)))
+        marginalia markdown-mode multi-vterm projectile rust-mode
+        swift-mode ultra-scroll vterm)))
 
 (custom-set-faces
  ;; custom-set-faces was added by Custom.

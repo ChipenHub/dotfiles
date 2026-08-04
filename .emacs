@@ -221,3 +221,17 @@
    ("M-y"     . consult-yank-pop)
    ("C-c r"   . consult-ripgrep)
    ("C-c f"   . consult-find)))
+
+;; projecfile: auto recognize your project root dir
+(use-package projectile
+  :init
+  (projectile-mode 1)
+  :bind-keymap
+  ("C-c p" . projectile-command-map))
+
+;; 自动保存到原文件
+(auto-save-visited-mode 1)
+(setq auto-save-visited-interval 3)
+
+;; 文件被外部修改时自动刷新
+(global-auto-revert-mode 1)
