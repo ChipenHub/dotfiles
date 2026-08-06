@@ -60,14 +60,19 @@
                         ]
                     },
                     {
-                        "description": "Control-G sends Escape",
+                        "description": "Control-W sends Option-Backspace",
                         "manipulators": [
                             {
                                 "from": {
-                                    "key_code": "g",
+                                    "key_code": "w",
                                     "modifiers": { "mandatory": ["control"] }
                                 },
-                                "to": [{ "key_code": "escape" }],
+                                "to": [
+                                    {
+                                        "key_code": "delete_or_backspace",
+                                        "modifiers": ["option"]
+                                    }
+                                ],
                                 "type": "basic"
                             }
                         ]
