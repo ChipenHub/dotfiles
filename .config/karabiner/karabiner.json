@@ -60,24 +60,6 @@
                         ]
                     },
                     {
-                        "description": "Control-W sends Option-Backspace",
-                        "manipulators": [
-                            {
-                                "from": {
-                                    "key_code": "w",
-                                    "modifiers": { "mandatory": ["control"] }
-                                },
-                                "to": [
-                                    {
-                                        "key_code": "delete_or_backspace",
-                                        "modifiers": ["option"]
-                                    }
-                                ],
-                                "type": "basic"
-                            }
-                        ]
-                    },
-                    {
                         "description": "Control-N/P move vertically",
                         "manipulators": [
                             {

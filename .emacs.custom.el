@@ -7,9 +7,9 @@
    '("e13beeb34b932f309fb2c360a04a460821ca99fe58f69e65557d6c1b10ba18c7"
      default))
  '(package-selected-packages
-   '(## ace-window consult ghostel gruber-darker-theme kotlin-mode magit
-        marginalia markdown-mode multi-vterm projectile rust-mode
-        swift-mode ultra-scroll vterm)))
+   '(## ace-window consult deadgrep ghostel gruber-darker-theme
+        kotlin-mode magit marginalia markdown-mode multi-vterm
+        projectile rust-mode swift-mode ultra-scroll vterm)))
 
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
