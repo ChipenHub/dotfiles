@@ -10,6 +10,9 @@ function rt
     }'
 end
 
+# export proxy
+abbr -a proxy 'export http{,s}_proxy=http://127.0.0.1:7897'
+
 # command replacements
 abbr -a cd 'z'
 abbr -a find 'fd'
