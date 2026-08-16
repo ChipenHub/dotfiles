@@ -25,18 +25,6 @@ abbr -a main 'tldr'
 abbr -a ii 'cd /Volumes/disk1/CapCut/iOS/CapCut/'
 abbr -a aa 'cd /Volumes/disk1/CapCut/Android/'
 
-# ios
-abbr -a i1 'cd /Volumes/disk1/Worktrees/ios/1/CapCut'
-abbr -a i2 'cd /Volumes/disk1/Worktrees/ios/2/CapCut'
-abbr -a i3 'cd /Volumes/disk1/Worktrees/ios/3/CapCut'
-abbr -a i4 'cd /Volumes/disk1/Worktrees/ios/4/CapCut'
-
-# android
-abbr -a a1 'cd /Volumes/disk1/Worktrees/and/1'
-abbr -a a2 'cd /Volumes/disk1/Worktrees/and/2'
-abbr -a a3 'cd /Volumes/disk1/Worktrees/and/3'
-abbr -a a4 'cd /Volumes/disk1/Worktrees/and/4'
-
 # rust
 abbr -a rc 'rustc'
 abbr -a cg 'cargo'
@@ -46,6 +34,7 @@ abbr -a ur 'uv run'
 
 # list
 abbr -a ll 'ls -al'
+abbr -a l 'eza -l'
 abbr -a s 'eza'
 abbr -a ss 'eza -al'
 
@@ -57,9 +46,6 @@ abbr -a c 'clear'
 
 # swift
 abbr -a sw 'swift'
-
-# coco
-abbr -a co 'coco'
 
 # remove
 abbr -a rmf 'rm -rf'
@@ -76,10 +62,7 @@ abbr -a gd 'git diff HEAD'
 abbr -a gd1 'git diff HEAD~1'
 abbr -a gdc 'git diff --cached'
 abbr -a gg 'git status && git diff HEAD'
-
-function gc
-    git add . && git commit -am $argv
-end
+abbr -a gc 'git commit -m'
 
 # find
 abbr -a f 'find'
