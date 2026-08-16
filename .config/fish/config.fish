@@ -76,11 +76,11 @@ if not string match -q -- $PNPM_HOME $PATH
 end
 # pnpm end
 
-# Added by coco installer
-fish_add_path /Users/bytedance/.local/bin
+# add home path
+fish_add_path $HOME/.local/bin
 
 # ctags
-abbr -a ct 'bash ~/Scripts/gen_tags.sh'
+abbr -a ct 'bash ~/scripts/gen_tags.sh'
 
 # capcut ios build/debug
 abbr -a ccbuild 'env -u PYTHONHOME DISABLE_RESET_PYHOME=true cdf build'
