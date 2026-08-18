@@ -33,9 +33,7 @@ abbr -a cg 'cargo'
 abbr -a ur 'uv run' 
 
 # list
-abbr -a ll 'ls -al'
-abbr -a l 'eza -l'
-abbr -a s 'eza'
+abbr -a s 'eza -l'
 abbr -a ss 'eza -al'
 
 # nvim
