@@ -1,0 +1,220 @@
+#!/usr/bin/env python3
+
+"""Open a path copied from tmux in a pane or window."""
+
+from __future__ import annotations
+
+import os
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+
+IGNORED_DIRS = {".git", ".cache", "node_modules"}
+
+
+def tmux_message(message: str) -> None:
+    subprocess.run(
+        ["tmux", "display-message", f"open-path: {message}"],
+        check=False,
+    )
+
+
+def pane_directory(pane_id: str) -> Path:
+    output = subprocess.check_output(
+        ["tmux", "display-message", "-p", "-t", pane_id, "#{pane_current_path}"],
+        text=True,
+    )
+    return Path(output.strip()).resolve()
+
+
+def split_location(raw: str) -> tuple[str, int | None, int | None]:
+    token = raw.strip().replace("\r", "")
+
+    wrappers = {"\"": "\"", "'": "'", "`": "`", "(": ")", "[": "]", "{": "}", "<": ">"}
+    while len(token) >= 2 and wrappers.get(token[0]) == token[-1]:
+        token = token[1:-1].strip()
+    token = token.rstrip(",;:")
+
+    match = re.fullmatch(r"(.+?):(\d+)(?::(\d+))?", token)
+    if match:
+        return (
+            match.group(1),
+            int(match.group(2)),
+            int(match.group(3)) if match.group(3) else None,
+        )
+
+    match = re.fullmatch(r"(.+)\((\d+)(?:,(\d+))?\)", token)
+    if match:
+        return (
+            match.group(1),
+            int(match.group(2)),
+            int(match.group(3)) if match.group(3) else None,
+        )
+
+    return token, None, None
+
+
+def search_root(cwd: Path) -> Path:
+    result = subprocess.run(
+        ["git", "-C", str(cwd), "rev-parse", "--show-toplevel"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode == 0 and result.stdout.strip():
+        return Path(result.stdout.strip()).resolve()
+    return cwd
+
+
+def entries_named(name: str, root: Path) -> list[Path]:
+    fd = shutil.which("fd") or shutil.which("fdfind")
+    if fd:
+        result = subprocess.run(
+            [
+                fd,
+                "--type",
+                "f",
+                "--type",
+                "d",
+                "--hidden",
+                "--exclude",
+                ".git",
+                "--exclude",
+                ".cache",
+                "--exclude",
+                "node_modules",
+                "--fixed-strings",
+                name,
+                str(root),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        paths = [Path(line).resolve() for line in result.stdout.splitlines()]
+        return [path for path in paths if path.name == name]
+
+    matches: list[Path] = []
+    for directory, dirnames, filenames in os.walk(root):
+        dirnames[:] = [item for item in dirnames if item not in IGNORED_DIRS]
+        if name in dirnames:
+            matches.append((Path(directory) / name).resolve())
+        if name in filenames:
+            matches.append((Path(directory) / name).resolve())
+    return matches
+
+
+def resolve_path(text: str, cwd: Path) -> tuple[Path | None, int]:
+    expanded = Path(os.path.expandvars(os.path.expanduser(text)))
+    direct = expanded if expanded.is_absolute() else cwd / expanded
+    if direct.exists():
+        return direct.resolve(), 1
+
+    name = expanded.name
+    if not name:
+        return None, 0
+
+    matches = entries_named(name, search_root(cwd))
+    wanted = expanded.as_posix().lstrip("./")
+
+    if "/" in wanted:
+        suffix_matches = [
+            path for path in matches if path.as_posix().endswith(f"/{wanted}")
+        ]
+        if suffix_matches:
+            matches = suffix_matches
+
+    cwd_matches = [path for path in matches if path.is_relative_to(cwd)]
+    if cwd_matches:
+        matches = cwd_matches
+
+    if len(matches) == 1:
+        return matches[0], 1
+    return None, len(matches)
+
+
+def open_target(
+    pane_id: str,
+    cwd: Path,
+    path: Path,
+    line: int | None,
+    column: int | None,
+    destination: str,
+) -> None:
+    program: list[str] = []
+    working_directory = path if path.is_dir() else cwd
+    if path.is_file():
+        program = ["nvim"]
+        if line is not None and column is not None:
+            program.append(f"+call cursor({line},{column})")
+        elif line is not None:
+            program.append(f"+{line}")
+        program.extend(["--", str(path)])
+
+    if destination == "window":
+        tmux_args = [
+            "tmux",
+            "new-window",
+            "-n",
+            path.name,
+            "-c",
+            str(working_directory),
+        ]
+    else:
+        tmux_args = [
+            "tmux",
+            "split-window",
+            "-h",
+            "-p",
+            "60",
+            "-t",
+            pane_id,
+            "-c",
+            str(working_directory),
+        ]
+
+    result = subprocess.run(
+        [*tmux_args, *program],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        tmux_message(result.stderr.strip() or "could not create the Neovim pane")
+
+
+def main() -> int:
+    if len(sys.argv) not in {2, 3}:
+        tmux_message("missing source pane")
+        return 2
+
+    destination = sys.argv[2] if len(sys.argv) == 3 else "pane"
+    if destination not in {"pane", "window"}:
+        tmux_message(f"invalid destination {destination!r}")
+        return 2
+
+    raw = sys.stdin.read()
+    path_text, line, column = split_location(raw)
+    if not path_text:
+        tmux_message("no path selected")
+        return 1
+
+    pane_id = sys.argv[1]
+    cwd = pane_directory(pane_id)
+    path, match_count = resolve_path(path_text, cwd)
+    if path is None:
+        if match_count > 1:
+            tmux_message(f"{path_text!r} is ambiguous ({match_count} matches)")
+        else:
+            tmux_message(f"cannot find {path_text!r} from {cwd}")
+        return 1
+
+    open_target(pane_id, cwd, path, line, column, destination)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
