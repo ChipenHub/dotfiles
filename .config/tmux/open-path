@@ -22,6 +22,13 @@ def tmux_message(message: str) -> None:
     )
 
 
+def set_pane_name(pane_id: str, name: str) -> None:
+    subprocess.run(
+        ["tmux", "set-option", "-p", "-t", pane_id, "@open_path_name", name],
+        check=False,
+    )
+
+
 def pane_directory(pane_id: str) -> Path:
     output = subprocess.check_output(
         ["tmux", "display-message", "-p", "-t", pane_id, "#{pane_current_path}"],
@@ -107,15 +114,15 @@ def entries_named(name: str, root: Path) -> list[Path]:
     return matches
 
 
-def resolve_path(text: str, cwd: Path) -> tuple[Path | None, int]:
+def resolve_path(text: str, cwd: Path) -> tuple[Path | None, list[Path]]:
     expanded = Path(os.path.expandvars(os.path.expanduser(text)))
     direct = expanded if expanded.is_absolute() else cwd / expanded
     if direct.exists():
-        return direct.resolve(), 1
+        return direct.resolve(), []
 
     name = expanded.name
     if not name:
-        return None, 0
+        return None, []
 
     matches = entries_named(name, search_root(cwd))
     wanted = expanded.as_posix().lstrip("./")
@@ -132,8 +139,22 @@ def resolve_path(text: str, cwd: Path) -> tuple[Path | None, int]:
         matches = cwd_matches
 
     if len(matches) == 1:
-        return matches[0], 1
-    return None, len(matches)
+        return matches[0], []
+    return None, matches
+
+
+def editor_command(
+    path: Path,
+    line: int | None,
+    column: int | None,
+) -> list[str]:
+    command = ["nvim"]
+    if line is not None and column is not None:
+        command.append(f"+call cursor({line},{column})")
+    elif line is not None:
+        command.append(f"+{line}")
+    command.extend(["--", str(path)])
+    return command
 
 
 def open_target(
@@ -147,17 +168,15 @@ def open_target(
     program: list[str] = []
     working_directory = path if path.is_dir() else cwd
     if path.is_file():
-        program = ["nvim"]
-        if line is not None and column is not None:
-            program.append(f"+call cursor({line},{column})")
-        elif line is not None:
-            program.append(f"+{line}")
-        program.extend(["--", str(path)])
+        program = editor_command(path, line, column)
 
     if destination == "window":
         tmux_args = [
             "tmux",
             "new-window",
+            "-P",
+            "-F",
+            "#{pane_id}",
             "-n",
             path.name,
             "-c",
@@ -167,6 +186,9 @@ def open_target(
         tmux_args = [
             "tmux",
             "split-window",
+            "-P",
+            "-F",
+            "#{pane_id}",
             "-h",
             "-p",
             "60",
@@ -184,9 +206,110 @@ def open_target(
     )
     if result.returncode != 0:
         tmux_message(result.stderr.strip() or "could not create the Neovim pane")
+    elif result.stdout.strip():
+        set_pane_name(result.stdout.strip(), path.name)
+
+
+def choose_target(
+    pane_id: str,
+    cwd: Path,
+    matches: list[Path],
+    line: int | None,
+    column: int | None,
+    destination: str,
+) -> None:
+    chooser = [
+        str(Path(__file__).resolve()),
+        "--choose",
+        destination,
+        str(line or 0),
+        str(column or 0),
+        *[str(path) for path in matches],
+    ]
+
+    if destination == "window":
+        tmux_args = [
+            "tmux",
+            "new-window",
+            "-P",
+            "-F",
+            "#{pane_id}",
+            "-n",
+            matches[0].name,
+            "-c",
+            str(cwd),
+        ]
+    else:
+        tmux_args = [
+            "tmux",
+            "split-window",
+            "-P",
+            "-F",
+            "#{pane_id}",
+            "-h",
+            "-p",
+            "60",
+            "-t",
+            pane_id,
+            "-c",
+            str(cwd),
+        ]
+
+    result = subprocess.run(
+        [*tmux_args, *chooser],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        tmux_message(result.stderr.strip() or "could not create the path chooser")
+    elif result.stdout.strip():
+        set_pane_name(result.stdout.strip(), matches[0].name)
+
+
+def run_chooser() -> int:
+    if len(sys.argv) < 7:
+        tmux_message("path chooser received no candidates")
+        return 2
+
+    destination = sys.argv[2]
+    line = int(sys.argv[3]) or None
+    column = int(sys.argv[4]) or None
+    matches = [Path(value) for value in sys.argv[5:]]
+
+    result = subprocess.run(
+        [
+            "fzf",
+            "--prompt=Open path > ",
+            "--layout=reverse",
+            "--no-multi",
+        ],
+        input="\n".join(str(path) for path in matches),
+        stdout=subprocess.PIPE,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0 or not result.stdout.strip():
+        return 0
+
+    path = Path(result.stdout.strip())
+    if destination == "window":
+        subprocess.run(["tmux", "rename-window", path.name], check=False)
+
+    if path.is_dir():
+        os.chdir(path)
+        shell = os.environ.get("SHELL", "/bin/sh")
+        os.execv(shell, [shell])
+
+    command = editor_command(path, line, column)
+    os.execvp(command[0], command)
+    return 0
 
 
 def main() -> int:
+    if len(sys.argv) >= 2 and sys.argv[1] == "--choose":
+        return run_chooser()
+
     if len(sys.argv) not in {2, 3}:
         tmux_message("missing source pane")
         return 2
@@ -204,10 +327,11 @@ def main() -> int:
 
     pane_id = sys.argv[1]
     cwd = pane_directory(pane_id)
-    path, match_count = resolve_path(path_text, cwd)
+    path, matches = resolve_path(path_text, cwd)
     if path is None:
-        if match_count > 1:
-            tmux_message(f"{path_text!r} is ambiguous ({match_count} matches)")
+        if matches:
+            choose_target(pane_id, cwd, matches, line, column, destination)
+            return 0
         else:
             tmux_message(f"cannot find {path_text!r} from {cwd}")
         return 1
