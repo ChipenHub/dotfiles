@@ -1,0 +1,4 @@
+interface:
+  display_name: "Minimal Coding Principle"
+  short_description: "Minimal, gated feature implementation"
+  default_prompt: "Use $minimal-coding-principle when adding a new feature."

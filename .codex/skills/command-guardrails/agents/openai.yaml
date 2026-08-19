@@ -1,0 +1,4 @@
+interface:
+  display_name: "Command Guardrails"
+  short_description: "Shell, Git, package, and edit safety rules"
+  default_prompt: "Use $command-guardrails to apply the command and hook safety rules before running shell commands."

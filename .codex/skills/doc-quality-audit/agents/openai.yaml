@@ -1,0 +1,4 @@
+interface:
+  display_name: "Doc Quality Audit"
+  short_description: "Trim and audit agent-facing docs"
+  default_prompt: "Use $doc-quality-audit to review this documentation for bloat and contradictions."

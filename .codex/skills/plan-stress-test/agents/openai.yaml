@@ -1,0 +1,4 @@
+interface:
+  display_name: "Plan Stress Test"
+  short_description: "Question a plan until decisions are clear"
+  default_prompt: "Use $plan-stress-test to interview me about this plan one question at a time."

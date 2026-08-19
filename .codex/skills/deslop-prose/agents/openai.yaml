@@ -1,0 +1,4 @@
+interface:
+  display_name: "Deslop Prose"
+  short_description: "Remove AI slop from prose and articles"
+  default_prompt: "Use $deslop-prose to rewrite this draft in a more human voice."

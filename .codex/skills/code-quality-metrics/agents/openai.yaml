@@ -1,0 +1,4 @@
+interface:
+  display_name: "Code Quality Metrics"
+  short_description: "Complexity and maintainability thresholds"
+  default_prompt: "Use $code-quality-metrics to evaluate whether this code is too complex."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Structural Code Search"
+  short_description: "AST-based search and codemod workflow"
+  default_prompt: "Use $structural-code-search to find this code pattern structurally."

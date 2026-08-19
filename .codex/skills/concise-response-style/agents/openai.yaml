@@ -1,0 +1,4 @@
+interface:
+  display_name: "Concise Response Style"
+  short_description: "One-claim and TLDR response style"
+  default_prompt: "Use $concise-response-style to answer this in one concise claim."

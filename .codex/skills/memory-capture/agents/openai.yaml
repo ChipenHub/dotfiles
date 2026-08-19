@@ -1,0 +1,4 @@
+interface:
+  display_name: "Memory Capture"
+  short_description: "Capture durable lessons and replay prompts"
+  default_prompt: "Use $memory-capture to turn this session into durable notes and a minimal replay prompt."

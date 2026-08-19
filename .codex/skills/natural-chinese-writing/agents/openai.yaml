@@ -1,0 +1,4 @@
+interface:
+  display_name: "Natural Chinese Writing"
+  short_description: "Natural Chinese translation and tech posts"
+  default_prompt: "Use $natural-chinese-writing to translate or polish this Chinese technical writing."

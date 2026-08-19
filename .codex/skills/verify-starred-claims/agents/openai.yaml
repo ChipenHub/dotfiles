@@ -1,0 +1,4 @@
+interface:
+  display_name: "Verify Starred Claims"
+  short_description: "Verify uncertain facts marked with a trailing *"
+  default_prompt: "Use $verify-starred-claims to verify claims marked with a trailing * before acting."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Doc Coauthoring"
+  short_description: "Structured workflow for specs and proposals"
+  default_prompt: "Use $doc-coauthoring to coauthor this design document with me."

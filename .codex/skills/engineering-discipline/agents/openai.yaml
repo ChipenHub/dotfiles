@@ -1,0 +1,4 @@
+interface:
+  display_name: "Engineering Discipline"
+  short_description: "Pragmatic coding habits for reliable changes"
+  default_prompt: "Use $engineering-discipline to make this code change with rigorous investigation and validation."

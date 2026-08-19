@@ -1,0 +1,4 @@
+interface:
+  display_name: "Fresh Architecture"
+  short_description: "Design architecture from requirements first"
+  default_prompt: "Use $fresh-architecture to design this system from requirements."
