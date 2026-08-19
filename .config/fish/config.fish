@@ -10,6 +10,9 @@ function rt
     }'
 end
 
+# codex default yolo
+abbr -a codex 'codex --yolo'
+
 # export proxy
 abbr -a proxy 'export http{,s}_proxy=http://127.0.0.1:7897'
 
@@ -79,18 +82,6 @@ fish_add_path $HOME/.local/bin
 
 # ctags
 abbr -a ct 'bash ~/scripts/gen_tags.sh'
-
-# capcut ios build/debug
-abbr -a ccbuild 'env -u PYTHONHOME DISABLE_RESET_PYHOME=true cdf build'
-abbr -a ccbuildonly 'env -u PYTHONHOME DISABLE_RESET_PYHOME=true JOJO_TAGS_LVCC_LOCAL_BUILD_MODE=debug_package bash .pipeline/build_debug_focus_link.sh'
-abbr -a ccinstall 'cdf build reinstall'
-abbr -a cclaunch 'cdf launch --relaunch --skip-assert true'
-abbr -a ccattach 'cdf debug'
-
-function ccdebug
-    cdf launch --relaunch --skip-assert true
-    and cdf debug
-end
 
 # z
 zoxide init fish | source
