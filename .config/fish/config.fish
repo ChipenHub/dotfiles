@@ -38,6 +38,7 @@ abbr -a ur 'uv run'
 # list
 abbr -a s 'eza -l'
 abbr -a ss 'eza -al'
+abbr -a l 'eza'
 
 # nvim
 abbr -a b 'nvim'
