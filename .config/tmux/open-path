@@ -38,7 +38,7 @@ def pane_directory(pane_id: str) -> Path:
 
 
 def split_location(raw: str) -> tuple[str, int | None, int | None]:
-    token = raw.strip().replace("\r", "")
+    token = re.sub(r"\s+", "", raw)
 
     wrappers = {"\"": "\"", "'": "'", "`": "`", "(": ")", "[": "]", "{": "}", "<": ">"}
     while len(token) >= 2 and wrappers.get(token[0]) == token[-1]:
