@@ -11,6 +11,28 @@ local map = function(mode, lhs, rhs, opts)
     vim.keymap.set(mode, lhs, rhs, opts)
 end
 
+-- ───────────────────────────── Emacs editing ──────────────────────────────
+
+-- Keep these mappings out of Normal and Visual modes.
+local emacs_motions = {
+    { lhs = "<C-p>", rhs = "<Up>", desc = "Move up" },
+    { lhs = "<C-n>", rhs = "<Down>", desc = "Move down" },
+    { lhs = "<C-f>", rhs = "<Right>", desc = "Move forward" },
+    { lhs = "<C-b>", rhs = "<Left>", desc = "Move backward" },
+    { lhs = "<C-a>", rhs = "<Home>", desc = "Move to line start" },
+    { lhs = "<C-e>", rhs = "<End>", desc = "Move to line end" },
+}
+
+for _, motion in ipairs(emacs_motions) do
+    map("i", motion.lhs, motion.rhs, { desc = "Emacs: " .. motion.desc })
+end
+
+map("i", "<C-k>", "<C-o>D", { desc = "Emacs: Kill to line end" })
+map("i", "<C-j>", "<CR>", { desc = "Emacs: Insert newline" })
+map("i", "<C-h>", "<BS>", { desc = "Emacs: Delete backward" })
+map("i", "<C-d>", "<Del>", { desc = "Emacs: Delete forward" })
+map("i", "<C-Space>", "<Esc>v", { desc = "Emacs: Start visual selection" })
+
 -- ───────────────────────────── Window navigation ─────────────────────────────
 
 map("n", "<C-h>", "<C-w>h", { desc = "Move to left window" })
