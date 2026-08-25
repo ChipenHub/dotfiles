@@ -1,6 +1,10 @@
 # Added by trae-cli installer
 fish_add_path /Users/bytedance/.local/bin
 
+# Default terminal editor
+set -gx EDITOR nvim
+set -gx VISUAL nvim
+
 # especiallly for emacs's compile-mode
 function rt
     readtags $argv | awk -F '\t' '{
@@ -86,6 +90,10 @@ abbr -a ct 'bash ~/scripts/gen_tags.sh'
 # z
 zoxide init fish | source
 
+# nnn
+export NNN_TRASH="trash"
+abbr -a n "nnn -eA"
+
 # nvm: align Node/npm with zsh (use nvm default)
 set -gx NVM_DIR "$HOME/.nvm"
 if test -s "$NVM_DIR/nvm.sh"
@@ -100,52 +108,4 @@ end
 
 function fish_prompt
     echo -n (prompt_pwd) "> "
-end
-
-set -g CX_MODEL_DEFAULT gpt-5.3-spark
-
-function cx --description 'Run a quick Codex task with full access'
-    if test (count $argv) -eq 0
-        echo 'Usage: cx "task"'
-        return 1
-    end
-
-    set -l prompt (string join ' ' -- $argv)
-    if string match -qr '^\[.*\]$' -- "$prompt"
-        set prompt (string replace -r '^\[(.*)\]$' '$1' -- "$prompt")
-    end
-
-    set -l cx_last (mktemp -t cx-last.XXXXXX)
-    set -l cx_log (mktemp -t cx-log.XXXXXX)
-    set -l cx_prompt "Execute this task directly in the current directory. Use tools and make the requested changes instead of only explaining commands. Keep the final response to at most three short lines. Task: $prompt"
-
-    codex exec \
-        --model gpt-5.6-luna \
-        --config 'model_reasoning_effort="low"' \
-        --dangerously-bypass-approvals-and-sandbox \
-        --ignore-user-config \
-        --ignore-rules \
-        --ephemeral \
-        --skip-git-repo-check \
-        --color never \
-        --cd "$PWD" \
-        --output-last-message $cx_last \
-        -- "$cx_prompt" >$cx_log 2>&1
-    set -l rc $status
-
-    if test $rc -eq 0
-        cat $cx_last
-    else if test -s $cx_last
-        cat $cx_last
-    else
-        set -l errors (string match -r -i '.*(error|fatal|failed|not supported|permission denied|operation not permitted).*' <$cx_log)
-        if test (count $errors) -gt 0
-            printf '%s\n' $errors
-        else
-            echo "cx: Codex failed with exit status $rc"
-        end
-    end
-
-    command rm -f $cx_last $cx_log
-    return $rc
 end
