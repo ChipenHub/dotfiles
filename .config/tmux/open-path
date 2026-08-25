@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""Open a path copied from tmux in a pane or window."""
+"""Open a copied path through nnn in a tmux pane or window."""
 
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ from pathlib import Path
 
 
 IGNORED_DIRS = {".git", ".cache", "node_modules"}
+NNN_PLUGIN_KEYS = tuple("OEZ9876543210ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
 
 
 def tmux_message(message: str) -> None:
@@ -157,17 +158,80 @@ def editor_command(
     return command
 
 
+def nnn_editor_plugin(
+    line: int | None,
+    column: int | None,
+    existing_plugins: str,
+) -> tuple[str, str]:
+    used_keys = {
+        entry.split(":", 1)[0]
+        for entry in existing_plugins.split(";")
+        if ":" in entry
+    }
+    key = next(key for key in NNN_PLUGIN_KEYS if key not in used_keys)
+
+    if line is not None and column is not None:
+        editor = f'nvim "+call cursor({line},{column})" -- "$nnn"'
+    elif line is not None:
+        editor = f'nvim +{line} -- "$nnn"'
+    else:
+        editor = 'nvim -- "$nnn"'
+
+    plugin = f"{key}:-!{editor}*"
+    existing_plugins = existing_plugins.rstrip(";")
+    plugins = f"{existing_plugins};{plugin}" if existing_plugins else plugin
+    return key, plugins
+
+
+def run_nnn(
+    path: Path,
+    line: int | None,
+    column: int | None,
+) -> None:
+    environment = os.environ.copy()
+    environment["EDITOR"] = "nvim"
+    environment["VISUAL"] = "nvim"
+    command = ["nnn", "-e"]
+
+    if path.is_file():
+        key, plugins = nnn_editor_plugin(
+            line,
+            column,
+            environment.get("NNN_PLUG", ""),
+        )
+        environment["NNN_PLUG"] = plugins
+        command.extend(["-P", key])
+
+    command.append(str(path))
+    os.execvpe(command[0], command, environment)
+
+
+def nnn_launcher_command(
+    path: Path,
+    line: int | None,
+    column: int | None,
+) -> list[str]:
+    return [
+        str(Path(__file__).resolve()),
+        "--nnn-open",
+        str(path),
+        str(line or 0),
+        str(column or 0),
+    ]
+
+
 def open_target(
     pane_id: str,
-    cwd: Path,
     path: Path,
     line: int | None,
     column: int | None,
     destination: str,
 ) -> None:
     program: list[str] = []
-    working_directory = path if path.is_dir() else cwd
-    if path.is_file():
+    working_directory = path if path.is_dir() else path.parent
+    if shutil.which("nnn"):
+        program = nnn_launcher_command(path, line, column)
+    elif path.is_file():
         program = editor_command(path, line, column)
 
     if destination == "window":
@@ -205,7 +269,7 @@ def open_target(
         check=False,
     )
     if result.returncode != 0:
-        tmux_message(result.stderr.strip() or "could not create the Neovim pane")
+        tmux_message(result.stderr.strip() or "could not create the path pane")
     elif result.stdout.strip():
         set_pane_name(result.stdout.strip(), path.name)
 
@@ -296,6 +360,9 @@ def run_chooser() -> int:
     if destination == "window":
         subprocess.run(["tmux", "rename-window", path.name], check=False)
 
+    if shutil.which("nnn"):
+        run_nnn(path, line, column)
+
     if path.is_dir():
         os.chdir(path)
         shell = os.environ.get("SHELL", "/bin/sh")
@@ -307,6 +374,11 @@ def run_chooser() -> int:
 
 
 def main() -> int:
+    if len(sys.argv) == 5 and sys.argv[1] == "--nnn-open":
+        path = Path(sys.argv[2])
+        run_nnn(path, int(sys.argv[3]) or None, int(sys.argv[4]) or None)
+        return 0
+
     if len(sys.argv) >= 2 and sys.argv[1] == "--choose":
         return run_chooser()
 
@@ -336,7 +408,7 @@ def main() -> int:
             tmux_message(f"cannot find {path_text!r} from {cwd}")
         return 1
 
-    open_target(pane_id, cwd, path, line, column, destination)
+    open_target(pane_id, path, line, column, destination)
     return 0
 
 
