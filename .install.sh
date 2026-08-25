@@ -7,4 +7,5 @@ stow -Rv \
   --dir="$dotfiles_dir" \
   --target="$HOME" \
   --ignore='(^|/)\.install\.sh$' \
+  --ignore='(^|/)\.agent(/|$)' \
   .
