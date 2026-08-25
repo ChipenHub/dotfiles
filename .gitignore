@@ -3,3 +3,6 @@
 .cadk/
 # Added by CADK
 .claude/skills/
+
+# broot runtime artifacts
+.config/broot/launcher/

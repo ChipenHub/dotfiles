@@ -21,7 +21,6 @@ abbr -a cd 'z'
 abbr -a find 'fd'
 abbr -a du 'dust'
 abbr -a df 'duf'
-abbr -a tree 'broot'
 abbr -a main 'tldr'
 
 # project
@@ -61,10 +60,10 @@ abbr -a gs 'git status'
 abbr -a gp 'git pull'
 abbr -a gl 'git log'
 abbr -a gd 'git diff HEAD'
-abbr -a gd1 'git diff HEAD~1'
 abbr -a gdc 'git diff --cached'
-abbr -a gg 'git status && git diff HEAD'
 abbr -a gc 'git commit -m'
+abbr -a grs 'git restore --staged'
+abbr -a gr 'git restore'
 
 # find
 abbr -a f 'find'
