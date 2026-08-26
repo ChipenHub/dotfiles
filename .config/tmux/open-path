@@ -192,7 +192,8 @@ def run_nnn(
     environment = os.environ.copy()
     environment["EDITOR"] = "nvim"
     environment["VISUAL"] = "nvim"
-    command = ["nnn", "-e"]
+    environment["NNN_OPENER"] = str(Path.home() / ".config/nnn/opener")
+    command = ["nnn", "-ecA"]
 
     if path.is_file():
         key, plugins = nnn_editor_plugin(

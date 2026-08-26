@@ -17,6 +17,7 @@ home_links=(
 config_links=(
   fish
   karabiner
+  nnn
   nvim
   tmux
 )

@@ -1,0 +1,78 @@
+#!/bin/sh
+set -eu
+
+# Keep editable files inside the terminal. nnn's `-e` only covers MIME text/*;
+# structured text such as JSON is application/* and can otherwise fall through
+# to the desktop opener.
+file=${1:?missing file}
+editor=${VISUAL:-${EDITOR:-nvim}}
+name=${file##*/}
+
+edit() {
+  exec "$editor" -- "$file"
+}
+
+case "$name" in
+  .bashrc|.bash_profile|.bash_aliases|.profile|.zprofile|.zshrc|.zshenv|.zlogin|\
+  .inputrc|.editorconfig|.gitignore|.gitattributes|.gitmodules|.gitconfig|\
+  .ignore|.rgignore|.fdignore|.dockerignore|.env|.env.*|Makefile|makefile|\
+  Dockerfile|Dockerfile.*|Containerfile|Containerfile.*|compose.yaml|compose.yml|\
+  docker-compose.yaml|docker-compose.yml|Gemfile|Rakefile|Brewfile|Justfile|justfile|\
+  Procfile|Vagrantfile|Caddyfile|nginx.conf|tmux.conf|requirements.txt|\
+  pyproject.toml|Cargo.toml|Cargo.lock|go.mod|go.sum|package.json|\
+  package-lock.json|pnpm-lock.yaml|yarn.lock|bun.lockb|deno.json|deno.lock|\
+  tsconfig.json|jsconfig.json|eslint.config.*|prettier.config.*|vite.config.*)
+    edit
+    ;;
+esac
+
+case "$file" in
+  *.1|*.2|*.3|*.4|*.5|*.6|*.7|*.8|*.9|\
+  *.adoc|*.asc|*.asm|*.awk|*.bash|*.bat|*.bib|*.c|*.cc|*.cfg|*.clj|\
+  *.cljs|*.cmake|*.cmd|*.conf|*.config|*.cpp|*.cs|*.csh|*.css|*.csv|\
+  *.cu|*.cuh|*.cxx|*.dart|*.diff|*.dockerfile|*.editorconfig|*.el|\
+  *.env|*.erl|*.ex|*.exs|*.fish|*.fs|*.fsi|*.fsx|*.gitattributes|\
+  *.gitignore|*.glsl|*.go|*.graphql|*.groovy|*.gv|*.h|*.haml|*.handlebars|\
+  *.hbs|*.hh|*.hpp|*.hrl|*.hs|*.htm|*.html|*.hxx|*.ini|*.java|\
+  *.jl|*.jq|*.js|*.json|*.json5|*.jsonc|*.jsx|*.ksh|*.kt|*.kts|*.less|\
+  *.lhs|*.lock|*.log|*.lua|*.m|*.make|*.markdown|*.md|*.mdx|*.mjs|*.mk|\
+  *.mm|*.nix|*.org|*.patch|*.pem|*.php|*.pl|*.plist|*.pm|*.proto|\
+  *.ps1|*.psm1|*.py|*.r|*.rb|*.rego|*.resx|*.rst|*.rs|*.rss|*.sass|\
+  *.scala|*.scss|*.sed|*.sh|*.sls|*.sql|*.srt|*.styl|*.swift|*.sxhkdrc|\
+  *.tex|*.text|*.tf|*.tfvars|*.toml|*.ts|*.tsx|*.txt|*.vim|*.vue|*.xml|\
+  *.xsd|*.xsl|*.xslt|*.yaml|*.yml|*.zig|*.zsh)
+    edit
+    ;;
+esac
+
+mime=$(file --brief --mime-type -- "$file" 2>/dev/null || true)
+encoding=$(file --brief --mime-encoding -- "$file" 2>/dev/null || true)
+
+case "$mime" in
+  text/*|\
+  application/ecmascript|application/javascript|application/json|application/ld+json|\
+  application/toml|application/xml|application/yaml|application/x-awk|\
+  application/x-csh|application/x-empty|application/x-httpd-php|\
+  application/x-javascript|application/x-perl|application/x-python|\
+  application/x-ruby|application/x-shellscript|application/x-sh|\
+  application/x-subrip|application/x-tex|application/x-yaml|\
+  inode/x-empty)
+    edit
+    ;;
+esac
+
+case "$encoding" in
+  binary|unknown)
+    ;;
+  *)
+    edit
+    ;;
+esac
+
+if command -v open >/dev/null 2>&1; then
+  exec open -- "$file"
+elif command -v xdg-open >/dev/null 2>&1; then
+  exec xdg-open "$file"
+else
+  edit
+fi

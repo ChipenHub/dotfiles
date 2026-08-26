@@ -92,7 +92,8 @@ zoxide init fish | source
 
 # nnn
 export NNN_TRASH="trash"
-abbr -a n "nnn -eA"
+set -gx NNN_OPENER "$HOME/.config/nnn/opener"
+abbr -a n "nnn -ecA"
 
 # nvm: align Node/npm with zsh (use nvm default)
 set -gx NVM_DIR "$HOME/.nvm"
