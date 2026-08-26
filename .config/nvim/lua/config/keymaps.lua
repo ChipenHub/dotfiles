@@ -115,22 +115,34 @@ local function listed_loaded_bufs()
     end, vim.api.nvim_list_bufs())
 end
 
-local function is_modified_file(bufnr)
-    return vim.bo[bufnr].modified and vim.bo[bufnr].modifiable and vim.bo[bufnr].buftype == ""
+local function save_if_needed(bufnr)
+    if not vim.bo[bufnr].modified then
+        return true
+    end
+
+    local buftype = vim.bo[bufnr].buftype
+    if buftype ~= "" and buftype ~= "acwrite" then
+        return false
+    end
+
+    local ok = pcall(vim.cmd.write)
+    return ok and not vim.bo[bufnr].modified
 end
 
 map("n", "q", function()
     if #visible_windows() > 1 or is_floating(0) then
         vim.cmd("hide")
     elseif #listed_loaded_bufs() > 1 then
-        if is_modified_file(0) then
-            vim.cmd("write")
+        local bufnr = vim.api.nvim_get_current_buf()
+        if not save_if_needed(bufnr) then
+            return
         end
         vim.cmd("bnext")
         vim.cmd("bdelete #")
     else
-        if is_modified_file(0) then
-            vim.cmd("write")
+        local bufnr = vim.api.nvim_get_current_buf()
+        if not save_if_needed(bufnr) then
+            return
         end
         vim.cmd("quit")
     end
