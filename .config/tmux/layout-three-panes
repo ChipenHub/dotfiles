@@ -26,7 +26,8 @@ case "$pane_count" in
             width_delta=$((-width_delta))
         fi
 
-        if [ "$pane_left" -gt 0 ] && [ "$width_delta" -le 100 ]; then
+        # Percentage rounding and the split border can shift the main pane by two cells.
+        if [ "$pane_left" -gt 0 ] && [ "$width_delta" -le 200 ]; then
             tmux select-layout -t "$pane_id" even-vertical
         else
             place_active_pane_on_right
