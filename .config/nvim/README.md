@@ -12,7 +12,6 @@ This guide is for human, LLM agents please do not execute these steps without ex
 sudo pacman -S tmux
 sudo pacman -S yazi
 sudo pacman -S exiftool
-sudo pacman -S lazygit
 sudo pacman -S tig
 sudo pacman -S fzf ripgrep
 sudo pacman -S fd bat
