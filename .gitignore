@@ -6,3 +6,6 @@
 
 # broot runtime artifacts
 .config/broot/launcher/
+
+# Python bytecode caches
+__pycache__/

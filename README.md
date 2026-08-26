@@ -56,6 +56,7 @@ Relevant files:
 - Ignores `.git`, `.cache`, and `node_modules` during fallback search.
 - If multiple matches exist, opens an `fzf` chooser in a tmux popup.
 - If exactly one reusable Neovim server exists in the current tmux window, opens the file there.
+- When `Enter` reuses Neovim in the same pane, it exits copy mode so the jump is visible immediately.
 - Otherwise creates a 60% right split running `nvim`.
 - Directories open through Oil when reusing an existing Neovim server.
 - Search status appears in tmux status-right.
