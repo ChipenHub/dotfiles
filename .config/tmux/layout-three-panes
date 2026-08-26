@@ -1,0 +1,41 @@
+#!/bin/sh
+
+set -eu
+
+pane_id=$1
+pane_count=$2
+
+place_active_pane_on_right() {
+    tmux select-layout -t "$pane_id" main-vertical-mirrored
+    right_pane=$(tmux list-panes -t "$pane_id" -f '#{pane_at_right}' -F '#{pane_id}')
+    if [ "$pane_id" != "$right_pane" ]; then
+        tmux swap-pane -d -s "$pane_id" -t "$right_pane"
+    fi
+    tmux select-pane -t "$pane_id"
+}
+
+case "$pane_count" in
+    2)
+        pane_left=$(tmux display-message -p -t "$pane_id" '#{pane_left}')
+        pane_width=$(tmux display-message -p -t "$pane_id" '#{pane_width}')
+        window_width=$(tmux display-message -p -t "$pane_id" '#{window_width}')
+        main_pane_width=$(tmux show-options -Avw -t "$pane_id" main-pane-width)
+        main_pane_percent=${main_pane_width%\%}
+        width_delta=$((pane_width * 100 - window_width * main_pane_percent))
+        if [ "$width_delta" -lt 0 ]; then
+            width_delta=$((-width_delta))
+        fi
+
+        if [ "$pane_left" -gt 0 ] && [ "$width_delta" -le 100 ]; then
+            tmux select-layout -t "$pane_id" even-vertical
+        else
+            place_active_pane_on_right
+        fi
+        ;;
+    3)
+        place_active_pane_on_right
+        ;;
+    *)
+        tmux next-layout -t "$pane_id"
+        ;;
+esac

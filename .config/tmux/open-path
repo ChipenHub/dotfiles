@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import shutil
@@ -220,6 +221,81 @@ def nnn_launcher_command(
     ]
 
 
+def find_reusable_nvim(pane_id: str) -> tuple[str, str] | None:
+    result = subprocess.run(
+        [
+            "tmux",
+            "list-panes",
+            "-t",
+            pane_id,
+            "-F",
+            "#{pane_id}\t#{@nvim_server}",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return None
+
+    panes = result.stdout.splitlines()
+    if len(panes) > 3:
+        return None
+
+    candidates: list[tuple[str, str]] = []
+    for entry in panes:
+        candidate_pane, _, server = entry.partition("\t")
+        if not server:
+            continue
+        probe = subprocess.run(
+            ["nvim", "--server", server, "--remote-expr", "1"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if probe.returncode == 0:
+            candidates.append((candidate_pane, server))
+
+    return candidates[0] if len(candidates) == 1 else None
+
+
+def open_in_nvim(
+    pane_id: str,
+    server: str,
+    path: Path,
+    line: int | None,
+    column: int | None,
+) -> bool:
+    path_literal = json.dumps(str(path), ensure_ascii=False)
+    expression = f"execute('hide edit ' . fnameescape({path_literal}))"
+    result = subprocess.run(
+        ["nvim", "--server", server, "--remote-expr", expression],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return False
+
+    if line is not None:
+        subprocess.run(
+            [
+                "nvim",
+                "--server",
+                server,
+                "--remote-expr",
+                f"cursor({line}, {column or 1})",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    set_pane_name(pane_id, path.name)
+    subprocess.run(["tmux", "select-pane", "-t", pane_id], check=False)
+    return True
+
+
 def open_target(
     pane_id: str,
     path: Path,
@@ -227,6 +303,13 @@ def open_target(
     column: int | None,
     destination: str,
 ) -> None:
+    if destination == "pane" and path.is_file():
+        reusable_nvim = find_reusable_nvim(pane_id)
+        if reusable_nvim is not None:
+            nvim_pane, server = reusable_nvim
+            if open_in_nvim(nvim_pane, server, path, line, column):
+                return
+
     program: list[str] = []
     working_directory = path if path.is_dir() else path.parent
     if shutil.which("nnn"):
@@ -285,61 +368,47 @@ def choose_target(
     chooser = [
         str(Path(__file__).resolve()),
         "--choose",
+        pane_id,
         destination,
+        str(cwd),
         str(line or 0),
         str(column or 0),
         *[str(path) for path in matches],
     ]
-
-    if destination == "window":
-        tmux_args = [
+    result = subprocess.run(
+        [
             "tmux",
-            "new-window",
-            "-P",
-            "-F",
-            "#{pane_id}",
-            "-n",
-            matches[0].name,
-            "-c",
-            str(cwd),
-        ]
-    else:
-        tmux_args = [
-            "tmux",
-            "split-window",
-            "-P",
-            "-F",
-            "#{pane_id}",
-            "-h",
-            "-p",
-            "60",
+            "display-popup",
+            "-E",
             "-t",
             pane_id,
-            "-c",
+            "-d",
             str(cwd),
-        ]
-
-    result = subprocess.run(
-        [*tmux_args, *chooser],
+            "-w",
+            "80%",
+            "-h",
+            "80%",
+            *chooser,
+        ],
         capture_output=True,
         text=True,
         check=False,
     )
     if result.returncode != 0:
-        tmux_message(result.stderr.strip() or "could not create the path chooser")
-    elif result.stdout.strip():
-        set_pane_name(result.stdout.strip(), matches[0].name)
+        tmux_message(result.stderr.strip() or "could not open the path chooser")
 
 
 def run_chooser() -> int:
-    if len(sys.argv) < 7:
+    if len(sys.argv) < 8:
         tmux_message("path chooser received no candidates")
         return 2
 
-    destination = sys.argv[2]
-    line = int(sys.argv[3]) or None
-    column = int(sys.argv[4]) or None
-    matches = [Path(value) for value in sys.argv[5:]]
+    pane_id = sys.argv[2]
+    destination = sys.argv[3]
+    cwd = Path(sys.argv[4])
+    line = int(sys.argv[5]) or None
+    column = int(sys.argv[6]) or None
+    matches = [Path(value) for value in sys.argv[7:]]
 
     result = subprocess.run(
         [
@@ -357,19 +426,9 @@ def run_chooser() -> int:
         return 0
 
     path = Path(result.stdout.strip())
-    if destination == "window":
-        subprocess.run(["tmux", "rename-window", path.name], check=False)
-
-    if shutil.which("nnn"):
-        run_nnn(path, line, column)
-
-    if path.is_dir():
-        os.chdir(path)
-        shell = os.environ.get("SHELL", "/bin/sh")
-        os.execv(shell, [shell])
-
-    command = editor_command(path, line, column)
-    os.execvp(command[0], command)
+    if not path.is_absolute():
+        path = (cwd / path).resolve()
+    open_target(pane_id, path, line, column, destination)
     return 0
 
 

@@ -4,6 +4,7 @@
 -- Load core config
 require("config.options")
 require("config.keymaps")
+require("config.tmux")
 
 -- Bootstrap lazy.nvim and load plugin specs
 require("config.lazy-setup")
