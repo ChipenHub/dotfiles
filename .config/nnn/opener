@@ -12,6 +12,23 @@ edit() {
   exec "$editor" -- "$file"
 }
 
+show_chafa() {
+  chafa --format=kitty --passthrough=auto --scale=max -- "$1"
+  printf '\n[enter] back to nnn ' > /dev/tty
+  IFS= read -r _ < /dev/tty || true
+  exit 0
+}
+
+view_with_chafa() {
+  show_chafa "$file"
+}
+
+block_external_open() {
+  printf 'not opening externally: %s\n[enter] back to nnn ' "$file" > /dev/tty
+  IFS= read -r _ < /dev/tty || true
+  exit 0
+}
+
 case "$name" in
   .bashrc|.bash_profile|.bash_aliases|.profile|.zprofile|.zshrc|.zshenv|.zlogin|\
   .inputrc|.editorconfig|.gitignore|.gitattributes|.gitmodules|.gitconfig|\
@@ -23,6 +40,16 @@ case "$name" in
   package-lock.json|pnpm-lock.yaml|yarn.lock|bun.lockb|deno.json|deno.lock|\
   tsconfig.json|jsconfig.json|eslint.config.*|prettier.config.*|vite.config.*)
     edit
+    ;;
+esac
+
+case "$file" in
+  *.avif|*.bmp|*.gif|*.heic|*.heif|*.ico|*.jpeg|*.jpg|*.jpe|*.jxl|*.png|\
+  *.qoi|*.svg|*.tif|*.tiff|*.webp|*.xwd)
+    view_with_chafa
+    ;;
+  *.3gp|*.avi|*.flv|*.m4v|*.mkv|*.mov|*.mp4|*.mpeg|*.mpg|*.ogv|*.webm|*.wmv)
+    block_external_open
     ;;
 esac
 
@@ -49,6 +76,12 @@ mime=$(file --brief --mime-type -- "$file" 2>/dev/null || true)
 encoding=$(file --brief --mime-encoding -- "$file" 2>/dev/null || true)
 
 case "$mime" in
+  image/*)
+    view_with_chafa
+    ;;
+  video/*)
+    block_external_open
+    ;;
   text/*|\
   application/ecmascript|application/javascript|application/json|application/ld+json|\
   application/toml|application/xml|application/yaml|application/x-awk|\
