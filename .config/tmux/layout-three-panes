@@ -33,7 +33,7 @@ case "$pane_count" in
             place_active_pane_on_right
         fi
         ;;
-    3)
+    3|4)
         place_active_pane_on_right
         ;;
     *)

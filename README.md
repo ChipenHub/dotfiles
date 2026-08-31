@@ -76,7 +76,7 @@ Relevant files:
 - Pane resize: `M-h/M-j/M-k/M-l`.
 - Split with cwd inherited: prefix `s` vertical, prefix `v` horizontal.
 - New window with cwd inherited: prefix `c` or `t`.
-- Preset layout: prefix `Space`; normalizes two/three-pane layouts around a wide right pane.
+- Preset layout: prefix `Space`; normalizes two/three/four-pane layouts around a wide right pane.
 - Window/session navigation: prefix `a` last window, prefix `A` last session, prefix `w` window tree, prefix `f` session tree.
 
 ## Neovim basics

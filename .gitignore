@@ -7,5 +7,11 @@
 # broot runtime artifacts
 .config/broot/launcher/
 
-# Python bytecode caches
+# Generated caches and local artifacts
+.DS_Store
+.cache/
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
 __pycache__/
+*.py[cod]

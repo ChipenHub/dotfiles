@@ -25,9 +25,20 @@ return {
         {
             "<leader>gd",
             function()
-                require("gitsigns").diffthis()
+                require("gitsigns").diffthis("HEAD", nil, function(err)
+                    if err then
+                        vim.notify(err, vim.log.levels.ERROR)
+                        return
+                    end
+
+                    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+                        if vim.wo[win].diff then
+                            vim.wo[win].foldenable = false
+                        end
+                    end
+                end)
             end,
-            desc = "Diff current file against index",
+            desc = "Diff current file against HEAD",
         },
     },
 }
