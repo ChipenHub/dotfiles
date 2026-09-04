@@ -68,6 +68,7 @@ abbr -a gdc 'git diff --cached'
 abbr -a gc 'git commit -m'
 abbr -a grs 'git restore --staged'
 abbr -a gr 'git restore'
+abbr --add --position anywhere -- --force --force-with-lease
 
 # find
 abbr -a f 'find'

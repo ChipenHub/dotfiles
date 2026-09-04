@@ -25,6 +25,7 @@ Home links:
 
 - `fish`
 - `karabiner`
+- `kitty`
 - `nnn`
 - `nvim`
 - `tmux`
@@ -46,7 +47,7 @@ Relevant files:
 2. Move the copy cursor onto a path, or select a path with `v` / mouse drag.
 3. Press `Enter` to open it in Neovim.
 4. Press `O` to open it in a new tmux window instead of a split.
-5. Press `Esc` to cancel copy mode and cancel any active path search.
+5. Press `Esc` to cancel an active search or selection; press `q` to exit copy mode.
 
 ### Behavior
 
@@ -71,7 +72,7 @@ Relevant files:
 
 ## tmux basics
 
-- Prefix is `C-s` instead of `C-b`.
+- Prefix is `C-s` instead of `C-b`; press `C-s` twice to toggle pane zoom.
 - Pane movement: prefix `h/j/k/l`.
 - Pane resize: `M-h/M-j/M-k/M-l`.
 - Split with cwd inherited: prefix `s` vertical, prefix `v` horizontal.
@@ -108,7 +109,7 @@ Useful keymaps:
 - Macro recording moved to `gq`.
 - Buffer navigation: `[b`, `]b`, `[B`, `]B`, `gb` / `gB`, `<leader>bd`.
 - Tags navigation: `gd`, `gD`, `gr`, `g]`, `g[`, native `C-t`.
-- Git: `<leader>gs` Fugitive status; `<leader>gp` preview hunk; `<leader>gb` blame; `<leader>gd` diff current file.
+- Git: `[c` / `]c` previous/next changed hunk; `<leader>gs` Fugitive status; `<leader>gp` preview hunk; `<leader>gb` blame; `<leader>gd` diff current file.
 - Multicursor: `C-n` selects next occurrence.
 
 ## Other useful config

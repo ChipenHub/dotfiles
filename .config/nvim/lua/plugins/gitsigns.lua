@@ -6,6 +6,25 @@ return {
         current_line_blame_opts = {
             delay = 300,
         },
+        on_attach = function(bufnr)
+            local gitsigns = require("gitsigns")
+
+            vim.keymap.set("n", "]c", function()
+                if vim.wo.diff then
+                    vim.cmd.normal({ "]c", bang = true })
+                else
+                    gitsigns.nav_hunk("next")
+                end
+            end, { buffer = bufnr, desc = "Next Git hunk" })
+
+            vim.keymap.set("n", "[c", function()
+                if vim.wo.diff then
+                    vim.cmd.normal({ "[c", bang = true })
+                else
+                    gitsigns.nav_hunk("prev")
+                end
+            end, { buffer = bufnr, desc = "Previous Git hunk" })
+        end,
     },
     keys = {
         {
