@@ -61,7 +61,7 @@ require("lazy").setup(specs, {
         version = false, -- use latest version
     },
     install = {
-        colorscheme = { "tokyonight" },
+        colorscheme = { "carbonfox" },
     },
     checker = {
         enabled = true,
