@@ -9,10 +9,15 @@ return {
         palettes = {
             carbonfox = {
                 bg0 = "#080808",
-                bg1 = "#000000",
+                bg1 = "#181818",
                 bg2 = "#101010",
                 bg3 = "#181818",
                 bg4 = "#202020",
+            },
+        },
+        groups = {
+            carbonfox = {
+                GitSignsCurrentLineBlame = { fg = "#404040" },
             },
         },
     },
