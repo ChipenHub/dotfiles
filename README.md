@@ -39,6 +39,7 @@ Relevant files:
 - `.tmux.conf`
 - `.config/tmux/open-path`
 - `.config/tmux/copy-mode-enter`
+- `.config/tmux/copy_mode_word.py`
 - `.config/nvim/lua/config/tmux.lua`
 
 ### Usage
@@ -64,11 +65,18 @@ Relevant files:
 
 ### Copy-mode helpers
 
-- `Enter` without a selection selects a space-delimited word and opens it.
-- `S-Enter` selects or extends a space-delimited word without opening it.
-- `viw` uses symbol-aware word boundaries.
-- `vip` uses space-delimited selection, better for paths.
+- `b` / `e` / `w` use Vim-style word boundaries, with `_` as punctuation and each Han character or Chinese punctuation mark as a separate unit. Numeric prefixes such as `3w` work too.
+- `viw` selects the current word, punctuation unit, or whitespace run.
+- `vaw` includes trailing whitespace, or preceding whitespace when there is no trailing whitespace (excluding indentation).
+- `vi"` / `va"` select inside / around quotes, respecting backslash escapes. Single quotes and backticks work too.
+- `vi(` / `va)` select inside / around nested, multiline blocks. Either bracket in `()`, `[]`, `{}` or `<>` works; `b` / `B` alias parentheses / braces.
+- Text objects select forward and retain rectangle mode. `C-v` toggles rectangle selection with the cursor on the right edge; `j` / `k` keep its columns across short lines and wide Chinese characters.
+- `vip` selects a path: ASCII punctuation such as `/._:` stays inside it; whitespace, Han characters and Chinese punctuation split it. This is a custom path object, not Vim's paragraph object.
+- `Enter` without a selection selects the same path object and opens it; `S-Enter` selects or extends it without opening.
 - `y` copies, `p` pastes, `q` cancels copy mode.
+
+These helpers require Python 3 and tmux with `capture-pane -M` support (tested on 3.6b).
+Run their tests with `python3 -m unittest discover -s .config/tmux/tests -v`.
 
 ## tmux basics
 
