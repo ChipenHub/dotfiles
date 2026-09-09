@@ -72,10 +72,10 @@ map("t", "<Esc><Esc>", "<C-\\><C-n>", { desc = "Exit terminal mode" })
 
 local tags = require("config.tags")
 
-map("n", "gd", tags.goto_def, { desc = "Go to definition (tags:tjump, fallback native gd)" })
-map("n", "gD", tags.goto_decl, { desc = "Go to declaration (tags prototype, fallback native gD)" })
+map("n", "gd", tags.goto_def, { desc = "Go to definition (scope-aware tags, fallback native gd)" })
+map("n", "gD", tags.goto_decl, { desc = "Go to declaration (scope-aware tags, fallback native gD)" })
 map("n", "gr", tags.find_refs, { desc = "Find references (rg -> quickfix)" })
-map("n", "g]", tags.list_tags, { desc = "List all tag entries for symbol (tselect)" })
+map("n", "g]", tags.list_tags, { desc = "List exact tag matches for symbol" })
 map("n", "g[", "<cmd>pop<CR>", { desc = "Pop to previous tag stack position" })
 -- <C-t> is Neovim's native tag fallback key; no mapping needed, noted here only.
 

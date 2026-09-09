@@ -56,19 +56,20 @@ def pane_directory(pane_id: str) -> Path:
     return Path(output.strip()).resolve()
 
 
-def split_location(raw: str) -> tuple[str, int | None, int | None]:
+def split_location(raw: str) -> tuple[str, int | None, int | None, int | None]:
     token = re.sub(r"\s+", "", raw)
 
-    wrappers = {"\"": "\"", "'": "'", "`": "`", "(": ")", "[": "]", "{": "}", "<": ">"}
+    wrappers = {'"': '"', "'": "'", "`": "`", "(": ")", "[": "]", "{": "}", "<": ">"}
     while len(token) >= 2 and wrappers.get(token[0]) == token[-1]:
         token = token[1:-1].strip()
     token = token.rstrip(",;:")
 
-    match = re.fullmatch(r"(.+?):(\d+)(?::(\d+))?", token)
+    match = re.fullmatch(r"(.+?):(\d+)(?:-(\d+))?(?::(\d+))?", token)
     if match:
         return (
             match.group(1),
             int(match.group(2)),
+            int(match.group(4)) if match.group(4) else None,
             int(match.group(3)) if match.group(3) else None,
         )
 
@@ -78,9 +79,10 @@ def split_location(raw: str) -> tuple[str, int | None, int | None]:
             match.group(1),
             int(match.group(2)),
             int(match.group(3)) if match.group(3) else None,
+            None,
         )
 
-    return token, None, None
+    return token, None, None, None
 
 
 def search_root(cwd: Path) -> Path:
@@ -244,12 +246,15 @@ def nvim_command(
     path: Path,
     line: int | None,
     column: int | None,
+    end_line: int | None,
 ) -> list[str]:
     command = ["nvim"]
     if path.is_file() and line is not None and column is not None:
         command.append(f"+call cursor({line},{column})")
     elif path.is_file() and line is not None:
         command.append(f"+{line}")
+    if path.is_file() and end_line is not None:
+        command.append(f"+normal! V{end_line}G")
     command.extend(["--", str(path)])
     return command
 
@@ -298,6 +303,7 @@ def open_in_nvim(
     path: Path,
     line: int | None,
     column: int | None,
+    end_line: int | None,
 ) -> bool:
     path_literal = json.dumps(str(path), ensure_ascii=False)
     if path.is_dir():
@@ -327,6 +333,19 @@ def open_in_nvim(
             text=True,
             check=False,
         )
+        if end_line is not None:
+            subprocess.run(
+                [
+                    "nvim",
+                    "--server",
+                    server,
+                    "--remote-expr",
+                    f"execute('normal! V{end_line}G')",
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
 
     set_pane_name(pane_id, path.name)
     subprocess.run(["tmux", "select-pane", "-t", pane_id], check=False)
@@ -338,6 +357,7 @@ def open_target(
     path: Path,
     line: int | None,
     column: int | None,
+    end_line: int | None,
     destination: str,
     exit_copy_on_same_pane: bool = False,
 ) -> None:
@@ -345,7 +365,7 @@ def open_target(
         reusable_nvim = find_reusable_nvim(pane_id)
         if reusable_nvim is not None:
             nvim_pane, server = reusable_nvim
-            if open_in_nvim(nvim_pane, server, path, line, column):
+            if open_in_nvim(nvim_pane, server, path, line, column, end_line):
                 if exit_copy_on_same_pane and nvim_pane == pane_id:
                     subprocess.run(
                         ["tmux", "send-keys", "-t", pane_id, "-X", "cancel"],
@@ -353,7 +373,7 @@ def open_target(
                     )
                 return
 
-    program = nvim_command(path, line, column)
+    program = nvim_command(path, line, column, end_line)
     working_directory = path if path.is_dir() else path.parent
 
     if destination == "window":
@@ -402,6 +422,7 @@ def choose_target(
     matches: list[Path],
     line: int | None,
     column: int | None,
+    end_line: int | None,
     destination: str,
     exit_copy_on_same_pane: bool = False,
 ) -> None:
@@ -414,6 +435,7 @@ def choose_target(
         str(cwd),
         str(line or 0),
         str(column or 0),
+        str(end_line or 0),
         *[str(path) for path in matches],
     ]
     result = subprocess.run(
@@ -440,7 +462,7 @@ def choose_target(
 
 
 def run_chooser() -> int:
-    if len(sys.argv) < 9:
+    if len(sys.argv) < 10:
         tmux_message("path chooser received no candidates")
         return 2
 
@@ -450,7 +472,8 @@ def run_chooser() -> int:
     cwd = Path(sys.argv[5])
     line = int(sys.argv[6]) or None
     column = int(sys.argv[7]) or None
-    matches = [Path(value) for value in sys.argv[8:]]
+    end_line = int(sys.argv[8]) or None
+    matches = [Path(value) for value in sys.argv[9:]]
 
     result = subprocess.run(
         [
@@ -470,7 +493,9 @@ def run_chooser() -> int:
     path = Path(result.stdout.strip())
     if not path.is_absolute():
         path = (cwd / path).resolve()
-    open_target(pane_id, path, line, column, destination, exit_copy_on_same_pane)
+    open_target(
+        pane_id, path, line, column, end_line, destination, exit_copy_on_same_pane
+    )
     return 0
 
 
@@ -490,7 +515,7 @@ def main() -> int:
     exit_copy_on_same_pane = len(sys.argv) == 4 and sys.argv[3] == "exit-copy"
 
     raw = sys.stdin.read()
-    path_text, line, column = split_location(raw)
+    path_text, line, column, end_line = split_location(raw)
     if not path_text:
         tmux_message("no path selected")
         return 1
@@ -510,6 +535,7 @@ def main() -> int:
                 matches,
                 line,
                 column,
+                end_line,
                 destination,
                 exit_copy_on_same_pane,
             )
@@ -518,7 +544,9 @@ def main() -> int:
             tmux_message(f"cannot find {path_text!r} from {cwd}")
         return 1
 
-    open_target(pane_id, path, line, column, destination, exit_copy_on_same_pane)
+    open_target(
+        pane_id, path, line, column, end_line, destination, exit_copy_on_same_pane
+    )
     return 0
 
 
