@@ -81,6 +81,16 @@ class WordTests(unittest.TestCase):
                         full_left, full_right = word.word_target(full, full_cursor, action)
                         self.assertEqual(local[left:right + 1], full[full_left:full_right + 1])
 
+    def test_tab_coordinates_keep_native_cursor_step_counts(self):
+        text = "你\tfoo\tbar\n"
+        cells, _ = word.cells_from_capture(text, text)
+        self.assertEqual(
+            [(cell.text, cell.x, cell.column) for cell in cells],
+            [("你", 0, 0), ("\t", 2, 1), ("f", 8, 2), ("o", 9, 3),
+             ("o", 10, 4), ("\t", 11, 5), ("b", 16, 6), ("a", 17, 7),
+             ("r", 18, 8), ("\n", 19, 9)],
+        )
+
     def test_wrap_and_combining_coordinates(self):
         cells, starts = word.cells_from_capture("你éfo\no：bar\n", "你éfoo：bar\n")
         self.assertEqual(starts, [0, 0])
@@ -273,6 +283,53 @@ class TmuxTests(unittest.TestCase):
     def test_path_selection(self):
         self.load("路径：/tmp/a_b.py:12，后文", column=7)
         self.assertEqual(self.selection("ip"), "/tmp/a_b.py:12")
+
+    def test_backward_motion_on_tab_prefixed_path(self):
+        text = "\t.config/tmux/copy_mode_word.py"
+        self.load(text, column=len(text) - 1)
+        for index in [text.rindex("py"), text.rindex("."), text.index("word"),
+                      text.index("_word"), text.index("mode"), text.index("_mode")]:
+            word.run(self.pane, "b")
+            self.assertEqual(self.cursor(), f"{index + 7},0,0")
+
+    def test_objects_on_tab_prefixed_path(self):
+        text = "\t.config/tmux/copy_mode_word.py"
+        self.load(text, column=text.index("word") + 1)
+        self.assertEqual(self.selection("iw"), "word")
+        self.assertEqual(self.selection("ip"), text[1:])
+
+    def test_tab_prefixed_objects_after_resize_refresh(self):
+        text = "\t.config/tmux/copy_mode_word.py"
+        self.load(text, column=text.index("word") + 1)
+        self.tmux("resize-window", "-t", self.pane, "-x", "60")
+        for _ in range(150):
+            pending = self.tmux("display-message", "-p", "-t", self.pane, "#{@copy_refresh_pending}").strip()
+            if pending == "0":
+                break
+            time.sleep(0.01)
+        self.assertEqual(pending, "0")
+        self.assertEqual(self.selection("iw"), "word")
+        self.assertEqual(self.selection("ip"), text[1:])
+
+    def test_real_keys_on_tab_prefixed_path(self):
+        text = "\t.config/tmux/copy_mode_word.py"
+        self.load(text, column=len(text) - 1)
+        with self.attached_client() as client:
+            self.tmux("send-keys", "-c", client, "-K", "B")
+            for _ in range(100):
+                if self.cursor() == "8,0,0":
+                    break
+                time.sleep(0.01)
+            self.assertEqual(self.cursor(), "8,0,0")
+            for keys, expected in [(["v", "i", "p", "y"], text[1:]),
+                                   (["v", "i", "w", "y"], "py")]:
+                self.tmux("set-buffer", "pending")
+                self.tmux("send-keys", "-c", client, "-K", *keys)
+                for _ in range(100):
+                    if self.tmux("show-buffer") == expected:
+                        break
+                    time.sleep(0.01)
+                self.assertEqual(self.tmux("show-buffer"), expected, keys)
 
     def test_wrapped_selection(self):
         self.load("你：" + "x" * 50 + "，end", column=12, row=1)

@@ -89,7 +89,12 @@ def cells_from_capture(
                 cells[-1].text += char
                 continue
             cells.append(Cell(char, x, y, column))
-            x += 2 if unicodedata.east_asian_width(char) in "WF" else 1
+            # capture-pane preserves tabs; cursor-right skips their padding in
+            # one step, but screen coordinates advance to the next tab stop.
+            if char == "\t":
+                x += 8 - x % 8
+            else:
+                x += 2 if unicodedata.east_asian_width(char) in "WF" else 1
             column += 1
         if line_ends[y]:
             cells.append(Cell("\n", x, y, column))
