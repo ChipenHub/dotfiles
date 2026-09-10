@@ -64,6 +64,10 @@ def split_location(raw: str) -> tuple[str, int | None, int | None, int | None]:
         token = token[1:-1].strip()
     token = token.rstrip(",;:")
 
+    match = re.fullmatch(r"(.+)#L(\d+)", token)
+    if match:
+        return match.group(1), int(match.group(2)), None, None
+
     match = re.fullmatch(r"(.+?):(\d+)(?:-(\d+))?(?::(\d+))?", token)
     if match:
         return (

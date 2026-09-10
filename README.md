@@ -52,7 +52,7 @@ Relevant files:
 
 ### Behavior
 
-- Accepts `file`, `dir/file`, `file:12`, `file:12:3`, and `file(12,3)`.
+- Accepts `file`, `dir/file`, `file:12`, `file:12:3`, `file(12,3)`, and `file#L12`.
 - Resolves existing paths relative to the source pane's current directory.
 - If the direct path does not exist, searches from the Git root.
 - Ignores `.git`, `.cache`, and `node_modules` during fallback search.
