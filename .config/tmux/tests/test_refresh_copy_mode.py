@@ -16,21 +16,25 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import refresh_copy_mode as refresh
 
 
-class PageTopTests(unittest.TestCase):
-    def test_appended_output_does_not_move_page(self):
+class RowAnchorTests(unittest.TestCase):
+    def test_appended_output_does_not_move_anchor(self):
         old = [str(i) for i in range(20)]
-        self.assertEqual(refresh.page_top(old, old + ["new"], 5, 6), 5)
+        self.assertEqual(refresh.find_row(old, old + ["new"], 5), 5)
 
     def test_trimmed_history(self):
         old = [str(i) for i in range(20)]
-        self.assertEqual(refresh.page_top(old, old[3:] + ["new"], 5, 5), 2)
+        self.assertEqual(refresh.find_row(old, old[3:] + ["new"], 5), 2)
 
     def test_context_disambiguates_repeated_lines(self):
         old = ["a", "same", "b", "c", "same", "d"]
-        self.assertEqual(refresh.page_top(old, old[3:], 4, 2), 1)
+        self.assertEqual(refresh.find_row(old, old[3:], 4), 1)
 
-    def test_replaced_screen_uses_fallback(self):
-        self.assertEqual(refresh.page_top(["old"], ["new"], 0, 0), 0)
+    def test_replaced_or_ambiguous_content_is_not_guessed(self):
+        self.assertIsNone(refresh.find_row(["old"], ["new"], 0))
+        self.assertIsNone(refresh.find_row(["same"] * 50, ["same"] * 60, 25))
+
+    def test_neighbours_can_change_around_a_unique_cursor_line(self):
+        self.assertEqual(refresh.find_row(["a", "cursor", "b"], ["c", "cursor", "d"], 1), 1)
 
 
 @unittest.skipUnless(shutil.which("tmux"), "tmux is required")
@@ -66,6 +70,7 @@ class RefreshTests(unittest.TestCase):
             "os.write(1, ''.join(f'row-{i:03d} 中文 contents\\r\\n' for i in range(60)).encode()); "
             "time.sleep(3600)"
         )
+        self.program = program
         self.pane = self.tmux("new-window", "-d", "-P", "-F", "#{pane_id}", sys.executable, "-c", program).strip()
         self.window = self.state("#{window_id}")
         self.wait_for(lambda: "row-059" in self.capture())
@@ -109,11 +114,22 @@ class RefreshTests(unittest.TestCase):
         lines = self.capture(copy=True).splitlines()
         return lines[len(lines) - height - scroll:][:height]
 
-    def test_refresh_keeps_page_and_cursor_without_exiting_mode(self):
+    def cursor_anchor(self):
+        physical = self.tmux("capture-pane", "-p", "-M", "-N", "-T", "-S", "-", "-E", "-", "-t", self.pane)
+        joined = self.tmux("capture-pane", "-p", "-M", "-J", "-S", "-", "-E", "-", "-t", self.pane)
+        cells, starts = refresh.cells_from_capture(physical, joined)
+        x, y, scroll, height = map(int, self.state("#{copy_cursor_x} #{copy_cursor_y} #{scroll_position} #{pane_height}").split())
+        row = physical.count("\n") - height - scroll + y
+        first = next(i for i, cell in enumerate(cells) if cell.y == starts[row])
+        last = next(i for i in range(first, len(cells)) if cells[i].text == "\n")
+        cursor = max(i for i, cell in enumerate(cells) if (cell.y, cell.x) <= (row, x))
+        return "".join(cell.text for cell in cells[first:last]), "".join(cell.text for cell in cells[first:cursor])
+
+    def test_refresh_keeps_pre_resize_page_and_cursor_without_exiting_mode(self):
         self.tmux("set-hook", "-p", "-t", self.pane, "pane-mode-changed[92]", "set-option -p @unexpected_mode_change yes")
-        self.resize()
         page = self.page()
         cursor = self.state("#{copy_cursor_x},#{copy_cursor_y}")
+        self.resize()
         self.fresh_output()
         self.assertNotIn("fresh-output", self.capture(copy=True))
         self.wait_refreshed()
@@ -123,30 +139,40 @@ class RefreshTests(unittest.TestCase):
         self.assertEqual(self.state("#{pane_mode}"), "copy-mode")
         self.assertEqual(self.state("#{@unexpected_mode_change}"), "")
 
-    def test_wrapped_lines_keep_post_resize_page_and_cursor(self):
-        self.tmux("resize-pane", "-t", self.pane, "-x", "17")
+    def test_wrapped_resize_round_trips_keep_original_character_and_screen_row(self):
+        # The cursor must cross onto a continuation row in the narrower pane.
+        self.tmux("send-keys", "-t", self.pane, "-X", "-N", "7", "cursor-right")
         page = self.page()
-        cursor = self.state("#{copy_cursor_x},#{copy_cursor_y}")
-        self.fresh_output()
-        self.wait_refreshed()
+        anchor = self.cursor_anchor()
+        y = self.state("#{copy_cursor_y}")
+        for width in [17, 40, 17, 40]:
+            with self.subTest(width=width):
+                self.tmux("resize-pane", "-t", self.pane, "-x", str(width))
+                self.wait_refreshed()
+                self.assertEqual(self.cursor_anchor(), anchor)
+                self.assertEqual(self.state("#{copy_cursor_y}"), y)
         self.assertEqual(self.page(), page)
-        self.assertEqual(self.state("#{copy_cursor_x},#{copy_cursor_y}"), cursor)
 
     def test_history_cleared_while_scrolled_does_not_crash_server(self):
+        cursor = self.state("#{copy_cursor_x},#{copy_cursor_y},#{scroll_position}")
         self.resize()
+        frozen = self.capture(copy=True)
         self.assertGreater(int(self.state("#{scroll_position}")), 0)
         os.kill(int(self.state("#{pane_pid}")), signal.SIGUSR2)
         self.wait_for(lambda: self.state("#{history_size}") == "0")
         self.assertEqual(self.state("#{pane_mode}"), "copy-mode")
         self.wait_refreshed()
-        self.assertEqual(self.state("#{pane_mode} #{scroll_position}"), "copy-mode 0")
-        self.assertEqual(self.capture(copy=True), self.capture())
+        self.assertEqual(self.state("#{pane_mode}"), "copy-mode")
+        self.assertEqual(self.capture(copy=True), frozen)
+        self.assertEqual(self.state("#{copy_cursor_x},#{copy_cursor_y},#{scroll_position}"), cursor)
 
     def test_history_shrink_after_capture_does_not_crash_server(self):
         # Invoke the worker directly so the race is deterministic, not timed.
         self.tmux("set-hook", "-gu", "window-layout-changed[91]")
         try:
             self.tmux("set-option", "-p", "-t", self.pane, "@copy_refresh_pending", "1")
+            frozen = self.capture(copy=True)
+            cursor = self.state("#{copy_cursor_x},#{copy_cursor_y},#{scroll_position}")
             check_output = subprocess.check_output
             cleared = False
 
@@ -161,9 +187,24 @@ class RefreshTests(unittest.TestCase):
             with patch.object(refresh.subprocess, "check_output", side_effect=clear_before_refresh):
                 refresh.run(self.socket_path, self.window, self.state("#{@copy_resize_generation}"))
             self.assertTrue(cleared)
-            self.assertEqual(self.state("#{pane_mode} #{scroll_position} #{@copy_refresh_pending}"), "copy-mode 0 0")
+            self.assertEqual(self.state("#{pane_mode} #{@copy_refresh_pending}"), "copy-mode 0")
+            self.assertEqual(self.capture(copy=True), frozen)
+            self.assertEqual(self.state("#{copy_cursor_x},#{copy_cursor_y},#{scroll_position}"), cursor)
         finally:
             self.tmux("source-file", str(self.root / ".tmux.conf"))
+
+    def test_height_round_trip_restores_screen_row_even_after_clipping(self):
+        self.tmux("send-keys", "-t", self.pane, "-X", "-N", "10", "cursor-down")
+        anchor = self.cursor_anchor()
+        y = int(self.state("#{copy_cursor_y}"))
+        height = self.state("#{window_height}")
+        self.assertGreater(y, 8)
+        for target in ["8", height, "8", height]:
+            with self.subTest(height=target):
+                self.tmux("resize-window", "-t", self.window, "-y", target)
+                self.wait_refreshed()
+                self.assertEqual(self.cursor_anchor(), anchor)
+                self.assertEqual(int(self.state("#{copy_cursor_y}")), min(y, int(self.state("#{pane_height}")) - 1))
 
     def test_terminal_resize_is_covered(self):
         self.tmux("resize-window", "-t", self.window, "-x", "100", "-y", "20")
@@ -171,15 +212,78 @@ class RefreshTests(unittest.TestCase):
         self.wait_refreshed()
         self.assertIn("fresh-output", self.capture(copy=True))
 
-    def test_all_resized_copy_panes_refresh_without_switching_focus(self):
+    def prepare_three_copy_panes(self):
+        primary = self.pane
         right = self.tmux("list-panes", "-t", self.window, "-f", "#{pane_at_right}", "-F", "#{pane_id}").strip()
-        self.tmux("copy-mode", "-t", right)
-        self.tmux("select-pane", "-t", right)
-        self.resize()
-        self.wait_refreshed()
-        self.wait_for(lambda: self.tmux("display-message", "-p", "-t", right, "#{@copy_refresh_pending}").strip() == "0")
-        self.assertEqual(self.tmux("display-message", "-p", "-t", right, "#{pane_mode} #{pane_active}").strip(), "copy-mode 1")
-        self.assertEqual(self.state("#{pane_mode} #{pane_active}"), "copy-mode 0")
+        # These are processes in this test's isolated server, not user panes.
+        self.tmux("respawn-pane", "-k", "-t", right, sys.executable, "-c", self.program)
+        third = self.tmux("split-window", "-d", "-v", "-t", right, "-P", "-F", "#{pane_id}", sys.executable, "-c", self.program).strip()
+        panes = [primary, right, third]
+        expected = {}
+        try:
+            for i, pane in enumerate(panes):
+                self.pane = pane
+                self.wait_for(lambda: "row-059" in self.capture())
+                self.tmux("copy-mode", "-t", pane)
+                self.tmux("send-keys", "-t", pane, "-X", "goto-line", "20")
+                self.tmux("send-keys", "-t", pane, "-X", "top-line")
+                self.tmux("send-keys", "-t", pane, "-X", "-N", str(i + 2), "cursor-down")
+                expected[pane] = (self.cursor_anchor(), self.state("#{copy_cursor_y}"))
+        finally:
+            self.pane = primary
+        time.sleep(0.4)
+        return panes, expected
+
+    def test_all_resized_copy_panes_refresh_without_switching_focus(self):
+        panes, expected = self.prepare_three_copy_panes()
+        primary = self.pane
+        try:
+            for active in panes:
+                before = dict(line.split() for line in self.tmux(
+                    "list-panes", "-t", self.window, "-F", "#{pane_id} #{pane_width}x#{pane_height}",
+                ).splitlines())
+                subprocess.run(
+                    [str(self.root / ".config/tmux/layout-three-panes"), active, "3"],
+                    env=dict(os.environ, TMUX=self.socket_path + ",0,0"), check=True,
+                )
+                for pane in panes:
+                    self.pane = pane
+                    self.fresh_output()
+                for pane in panes:
+                    self.pane = pane
+                    self.wait_refreshed()
+                    self.assertEqual((self.cursor_anchor(), self.state("#{copy_cursor_y}")), expected[pane], pane)
+                    self.assertEqual(self.state("#{pane_active}"), "1" if pane == active else "0")
+                    if self.state("#{pane_width}x#{pane_height}") != before[pane]:
+                        self.assertEqual(self.capture(copy=True).count("fresh-output"), self.capture().count("fresh-output"), pane)
+        finally:
+            self.pane = primary
+
+    def test_inactive_stale_pane_restores_viewport_without_replacing_snapshot(self):
+        panes, expected = self.prepare_three_copy_panes()
+        primary, stale, _ = panes
+        try:
+            self.pane = stale
+            os.kill(int(self.state("#{pane_pid}")), signal.SIGUSR2)
+            self.wait_for(lambda: self.state("#{history_size}") == "0")
+            subprocess.run(
+                [str(self.root / ".config/tmux/layout-three-panes"), primary, "3"],
+                env=dict(os.environ, TMUX=self.socket_path + ",0,0"), check=True,
+            )
+            for pane in panes:
+                self.pane = pane
+                self.fresh_output()
+            for pane in panes:
+                self.pane = pane
+                self.wait_refreshed()
+                self.assertEqual((self.cursor_anchor(), self.state("#{copy_cursor_y}")), expected[pane], pane)
+                self.assertEqual(self.state("#{pane_active}"), "1" if pane == primary else "0")
+                if pane == stale:
+                    self.assertNotIn("fresh-output", self.capture(copy=True))
+                else:
+                    self.assertIn("fresh-output", self.capture(copy=True))
+        finally:
+            self.pane = primary
 
     def test_resize_burst_is_debounced(self):
         for _ in range(4):
@@ -209,6 +313,39 @@ class RefreshTests(unittest.TestCase):
         self.wait_refreshed()
         self.assertIn("fresh-output", self.capture(copy=True))
 
+    def test_real_prefix_space_restores_all_panes_when_focus_changes(self):
+        panes, _ = self.prepare_three_copy_panes()
+        primary = self.pane
+        self.tmux("select-window", "-t", self.window)
+        client = subprocess.Popen(
+            ["tmux", "-L", self.socket, "-C", "attach-session", "-t", "refresh"],
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        )
+        try:
+            self.wait_for(lambda: self.tmux("list-clients", "-F", "#{client_name}").strip())
+            name = self.tmux("list-clients", "-F", "#{client_name}").strip()
+            time.sleep(0.4)  # Attaching can itself resize the window.
+            expected = {}
+            for i, pane in enumerate(panes):
+                self.pane = pane
+                self.tmux("send-keys", "-t", pane, "-X", "top-line")
+                self.tmux("send-keys", "-t", pane, "-X", "-N", str(i + 2), "cursor-down")
+                expected[pane] = (self.cursor_anchor(), self.state("#{copy_cursor_y}"))
+            for active in panes + [primary]:
+                self.pane = active
+                self.tmux("select-pane", "-t", active)
+                size = self.state("#{pane_width}x#{pane_height}")
+                self.tmux("send-keys", "-c", name, "-K", "C-s", "Space")
+                self.wait_for(lambda: self.state("#{pane_width}x#{pane_height}") != size)
+                for pane in panes:
+                    self.pane = pane
+                    self.wait_refreshed()
+                    self.assertEqual((self.cursor_anchor(), self.state("#{copy_cursor_y}")), expected[pane], pane)
+                    self.assertEqual(self.state("#{pane_active}"), "1" if pane == active else "0")
+        finally:
+            self.pane = primary
+            client.communicate(timeout=5)
+
     def test_exit_and_reenter_during_delay_is_not_refreshed(self):
         self.resize()
         self.tmux("send-keys", "-t", self.pane, "-X", "cancel")
@@ -230,6 +367,15 @@ class RefreshTests(unittest.TestCase):
         self.assertNotIn("fresh-output", self.capture(copy=True))
         self.wait_refreshed()
         self.assertIn("fresh-output", self.capture(copy=True))
+
+    def test_user_motion_during_debounce_cancels_restoration(self):
+        self.resize()
+        self.tmux("send-keys", "-t", self.pane, "-X", "cursor-down")
+        cursor = self.state("#{copy_cursor_x},#{copy_cursor_y},#{scroll_position}")
+        self.fresh_output()
+        time.sleep(0.45)
+        self.assertEqual(self.state("#{copy_cursor_x},#{copy_cursor_y},#{scroll_position}"), cursor)
+        self.assertNotIn("fresh-output", self.capture(copy=True))
 
     def test_exited_copy_mode_stays_exited(self):
         self.resize()

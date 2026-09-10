@@ -1,3 +1,7 @@
+# Disable the startup greeting and direnv status messages.
+set -g fish_greeting
+set -gx DIRENV_LOG_FORMAT ""
+
 # Added by trae-cli installer
 fish_add_path /Users/bytedance/.local/bin
 

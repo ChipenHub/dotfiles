@@ -1,0 +1,17 @@
+#!/bin/sh
+
+set -eu
+
+client_name=$1
+token=$$
+option="@prefix_timeout_$client_name"
+
+tmux set-option -gq "$option" "$token"
+sleep 0.5
+
+[ "$(tmux show-option -gv "$option")" = "$token" ] || exit 0
+key_table=$(tmux list-clients -F '#{client_name}	#{client_key_table}' |
+    awk -F '\t' -v client="$client_name" '$1 == client { print $2; exit }')
+[ "$key_table" = prefix ] || exit 0
+
+tmux switch-client -c "$client_name" -T root

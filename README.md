@@ -74,15 +74,16 @@ Relevant files:
 - `vip` selects a path: ASCII punctuation such as `/._:` stays inside it; whitespace, Han characters and Chinese punctuation split it. This is a custom path object, not Vim's paragraph object.
 - `Enter` without a selection selects the same path object and opens it; `S-Enter` selects or extends it without opening.
 - `y` copies, `p` pastes, `q` cancels copy mode.
-- Layout changes (prefix `Space`, pane resizing, or terminal resizing) refresh resized copy-mode panes after 300ms without another layout change. `.config/tmux/refresh_copy_mode.py` uses native `refresh-from-pane`, without leaving copy mode or switching panes.
-- Refresh retains the post-resize cursor coordinates and anchors the page to nearby text when possible. If the application replaced that text, it keeps the scroll position instead. tmux clears selections on resize/refresh. The helper resets the scroll offset before refreshing to avoid a tmux 3.6a crash when live history shrinks; direct native `r` does not have this protection.
+- Layout changes (prefix `Space`, pane resizing, or terminal resizing) refresh every resized copy-mode pane, focused or not, after 300ms without another layout change. `.config/tmux/refresh_copy_mode.py` uses native `refresh-from-pane`, without leaving copy mode or switching panes.
+- Refresh follows the cursor's text through wrapping and restores its **pre-resize** screen row (clamped in a shorter pane). Copy-mode input during the delay cancels restoration. Missing or ambiguous cursor text, or history changes during capture, still restore the viewport using the frozen snapshot without replacing its content. They do not skip the pane or guess a position in the live output.
+- tmux clears selections on resize/refresh. The helper resets the scroll offset before refreshing to avoid a tmux 3.6a crash when live history shrinks; direct native `r` does not have this protection.
 
 These helpers require Python 3 and tmux with `capture-pane -M` support (tested on 3.6a and 3.6b).
 Run their tests with `python3 -m unittest discover -s .config/tmux/tests -v`.
 
 ## tmux basics
 
-- Prefix is `C-s` instead of `C-b`; press `C-s` twice to toggle pane zoom.
+- Prefix is `C-s` instead of `C-b`; it expires after 500ms. Press `C-s` twice within that window to toggle pane zoom.
 - Pane movement: prefix `h/j/k/l`.
 - Pane resize: `M-h/M-j/M-k/M-l`.
 - Split with cwd inherited: prefix `s` vertical, prefix `v` horizontal.
