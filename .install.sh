@@ -65,6 +65,25 @@ for path in "$dotfiles_dir/.config"/*; do
 done
 shopt -u nullglob dotglob
 
+# Stow refuses absolute symlinks in a package. These are runtime-managed links
+# (for example CADK capabilities), so leave their installation to their owner.
+managed_roots=()
+for name in "${home_links[@]}"; do
+  managed_roots+=("$dotfiles_dir/$name")
+done
+for name in "${config_links[@]}"; do
+  managed_roots+=("$dotfiles_dir/.config/$name")
+done
+
+while IFS= read -r -d '' path; do
+  case "$(readlink "$path")" in
+    /*)
+      relative_path="${path#"$dotfiles_dir"/}"
+      ignore_args+=(--ignore="^$(regex_escape "$relative_path")$")
+      ;;
+  esac
+done < <(find -H "${managed_roots[@]}" -type l -print0)
+
 mkdir -p "$HOME/.config"
 
 stow \
