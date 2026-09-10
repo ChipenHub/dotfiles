@@ -25,15 +25,11 @@ abbr -a cd 'z'
 abbr -a find 'fd'
 abbr -a du 'dust'
 abbr -a df 'duf'
-abbr -a main 'tldr'
 
 # project
 abbr -a ii 'cd /Volumes/disk1/CapCut/iOS/CapCut/'
+abbr -a i2 'cd /Volumes/disk1/CapCut/iOS2/CapCut/'
 abbr -a aa 'cd /Volumes/disk1/CapCut/Android/'
-
-# rust
-abbr -a rc 'rustc'
-abbr -a cg 'cargo'
 
 # uv
 abbr -a ur 'uv run' 
@@ -49,25 +45,22 @@ abbr -a b 'nvim'
 # clear
 abbr -a c 'clear'
 
-# swift
-abbr -a sw 'swift'
-
 # remove
 abbr -a rmf 'rm -rf'
 
 # cp
 abbr -a cp 'cp -r'
 
+# cp
+abbr -a r 'rg'
+
 # git
 abbr -a g 'git'
 abbr -a gs 'git status'
-abbr -a gp 'git pull'
 abbr -a gl 'git log'
-abbr -a gd 'git diff HEAD'
-abbr -a gdc 'git diff --cached'
+abbr -a gd 'git diff'
 abbr -a gc 'git commit -m'
-abbr -a grs 'git restore --staged'
-abbr -a gr 'git restore'
+abbr -a ga 'git commit -am'
 abbr --add --position anywhere -- --force --force-with-lease
 
 # find
