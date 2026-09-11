@@ -74,9 +74,8 @@ Relevant files:
 - `vip` selects a path: ASCII punctuation such as `/._:` stays inside it; whitespace, Han characters and Chinese punctuation split it. This is a custom path object, not Vim's paragraph object.
 - `Enter` without a selection selects the same path object and opens it; `S-Enter` selects or extends it without opening.
 - `y` copies, `p` pastes, `q` cancels copy mode.
-- Layout changes (prefix `Space`, pane resizing, or terminal resizing) refresh every resized copy-mode pane, focused or not, after 300ms without another layout change. `.config/tmux/refresh_copy_mode.py` uses native `refresh-from-pane`, without leaving copy mode or switching panes.
-- Refresh follows the cursor's text through wrapping and restores its **pre-resize** screen row (clamped in a shorter pane). Copy-mode input during the delay cancels restoration. Missing or ambiguous cursor text, or history changes during capture, still restore the viewport using the frozen snapshot without replacing its content. They do not skip the pane or guess a position in the live output.
-- tmux clears selections on resize/refresh. The helper resets the scroll offset before refreshing to avoid a tmux 3.6a crash when live history shrinks; direct native `r` does not have this protection.
+- Layout changes (prefix `Space`, pane resizing, or terminal resizing) refresh every resized copy-mode pane, focused or not, after **300ms** without another layout change. Tracking uses hidden environment variables to avoid global redraws; stale timers do not start workers.
+- `.config/tmux/refresh_copy_mode.py` records the cursor's x/y and the frozen page's absolute history row **at refresh time**, exits and re-enters copy mode, then restores that row without switching focus. With history retained, appended output does not move the page. Positions are clamped when necessary. It does not match text, preserve selections, or restore a pre-resize content anchor. Output arriving after this one-shot refresh remains frozen.
 
 These helpers require Python 3 and tmux with `capture-pane -M` support (tested on 3.6a and 3.6b).
 Run their tests with `python3 -m unittest discover -s .config/tmux/tests -v`.

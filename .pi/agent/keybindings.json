@@ -1,4 +1,9 @@
 {
+  "tui.altScreen.halfPageUp": "alt+u",
+  "tui.altScreen.halfPageDown": "alt+d",
+  "tui.altScreen.previousPrompt": ["ctrl+shift+up", "alt+shift+u"],
+  "tui.altScreen.nextPrompt": ["ctrl+shift+down", "alt+shift+d"],
+
   "tui.editor.cursorUp": ["up", "ctrl+p"],
   "tui.editor.cursorDown": ["down", "ctrl+n"],
   "tui.editor.cursorLeft": ["left", "ctrl+b"],

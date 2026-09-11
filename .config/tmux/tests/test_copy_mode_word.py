@@ -303,7 +303,7 @@ class TmuxTests(unittest.TestCase):
         self.load(text, column=text.index("word") + 1)
         self.tmux("resize-window", "-t", self.pane, "-x", "60")
         for _ in range(150):
-            pending = self.tmux("display-message", "-p", "-t", self.pane, "#{@copy_refresh_pending}").strip()
+            pending = self.tmux("display-message", "-p", "-t", self.pane, "#{E:@copy_refresh_pending}").strip()
             if pending == "0":
                 break
             time.sleep(0.01)
