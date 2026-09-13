@@ -23,7 +23,16 @@ abbr -a codex 'codex --yolo'
 
 # export proxy
 abbr -a proxy 'export http{,s}_proxy=http://127.0.0.1:7897'
-export http{,s}_proxy=http://127.0.0.1:7897
+abbr -a unproxy 'set -e http_proxy https_proxy'
+
+# Use the local proxy only for Pi and its child processes.
+function pi
+    set -lx HTTP_PROXY http://127.0.0.1:7897
+    set -lx HTTPS_PROXY http://127.0.0.1:7897
+    set -lx http_proxy http://127.0.0.1:7897
+    set -lx https_proxy http://127.0.0.1:7897
+    command pi $argv
+end
 
 # command replacements
 abbr -a cd 'z'
