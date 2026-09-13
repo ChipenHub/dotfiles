@@ -103,15 +103,13 @@ export NNN_TRASH="trash"
 set -gx NNN_OPENER "$HOME/.config/nnn/opener"
 abbr -a n "nnn -ecA"
 
-# nvm: align Node/npm with zsh (use nvm default)
+# Use the concrete NVM default without loading NVM during shell startup.
 set -gx NVM_DIR "$HOME/.nvm"
-if test -s "$NVM_DIR/nvm.sh"
-  set -l nvm_default (bash -lc 'source "$HOME/.nvm/nvm.sh" >/dev/null 2>&1; nvm version default 2>/dev/null' 2>/dev/null)
-  if test -n "$nvm_default"; and test "$nvm_default" != "N/A"
-    set -l nvm_bin "$NVM_DIR/versions/node/$nvm_default/bin"
-    if test -d "$nvm_bin"
-      fish_add_path --prepend "$nvm_bin"
-    end
+if test -s "$NVM_DIR/alias/default"
+  set -l nvm_default (string trim < "$NVM_DIR/alias/default")
+  set -l nvm_bin "$NVM_DIR/versions/node/v$nvm_default/bin"
+  if test -d "$nvm_bin"
+    fish_add_path --prepend "$nvm_bin"
   end
 end
 
