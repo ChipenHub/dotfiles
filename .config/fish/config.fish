@@ -23,6 +23,7 @@ abbr -a codex 'codex --yolo'
 
 # export proxy
 abbr -a proxy 'export http{,s}_proxy=http://127.0.0.1:7897'
+export http{,s}_proxy=http://127.0.0.1:7897
 
 # command replacements
 abbr -a cd 'z'
