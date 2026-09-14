@@ -77,6 +77,60 @@ abbr -a gc 'git commit -m'
 abbr -a ga 'git commit -am'
 abbr --add --position anywhere -- --force --force-with-lease
 
+function commit --description 'Commit staged changes with a Spark-generated message'
+    set -l repo_check (git rev-parse --is-inside-work-tree 2>&1)
+    if test $status -ne 0
+        printf '%s\n' $repo_check >&2
+        return 1
+    end
+
+    git diff --cached --quiet --
+    set -l diff_status $status
+    if test $diff_status -eq 0
+        echo 'Nothing staged; no commit created.'
+        return 0
+    else if test $diff_status -ne 1
+        echo 'Failed to inspect staged changes.' >&2
+        return $diff_status
+    end
+
+    set -l message (begin
+        printf '%s\n' \
+            'Generate a Git commit message for the staged diff below. Output exactly one line and nothing else. Use the format <type>: <lowercase English description>, with the narrowest conventional commit type. Do not use Markdown, quotes, a scope, or a trailing period.' \
+            '<staged_diff>'
+        git diff --cached --
+        printf '%s\n' '</staged_diff>'
+    end | pi \
+        --model openai-codex/gpt-5.3-codex-spark \
+        --thinking off \
+        --no-session \
+        --no-tools \
+        --no-extensions \
+        --no-skills \
+        --no-prompt-templates \
+        --no-context-files \
+        -p)
+    set -l pi_status $status
+    if test $pi_status -ne 0
+        echo 'Failed to generate a commit message.' >&2
+        return $pi_status
+    end
+
+    if test (count $message) -ne 1
+        echo 'Spark returned an invalid multiline commit message; no commit created.' >&2
+        return 1
+    end
+
+    set message (string trim -- "$message")
+    if not string match -rq '^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test): [a-z0-9]' -- "$message"
+        printf 'Spark returned an invalid commit message: %s\n' "$message" >&2
+        return 1
+    end
+
+    printf 'Commit message: %s\n' "$message"
+    git commit -m "$message"
+end
+
 # find
 abbr -a f 'find'
 
