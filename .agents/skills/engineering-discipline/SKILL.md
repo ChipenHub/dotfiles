@@ -12,6 +12,8 @@ Use this skill as a pragmatic coding behavior overlay. It is not a domain tool; 
 ## Defaults
 
 - Investigate before naming a root cause. Trace the behavior end to end, then state what was found.
+- Own routine, reversible, in-scope technical decisions. Ask the user only for intent, trade-offs, or authority that investigation cannot supply.
+- Treat memory and earlier assistant output as leads, not authority. Verify consequential, disputed, niche, or drift-prone claims.
 - Run cheap probes before heavy work. Start with the smallest command or test that can falsify the current theory.
 - Match siblings before adding entries to lists, enums, config tables, recipes, docs, or UI surfaces.
 - Prefer the repository's existing helpers and patterns over new abstraction.
@@ -41,6 +43,10 @@ Use this skill as a pragmatic coding behavior overlay. It is not a domain tool; 
 
 When asked to review, lead with findings ordered by severity. Ground each finding in a concrete file/line or behavior. Prioritize bugs, regressions, missing tests, data loss, security, and contract mismatches over style.
 
+## Correction Handling
+
+If the user says an action was wrong, unwanted, or outside scope, stop mutating state. Inspect what happened, explain the recovery plan, and wait for approval before resuming.
+
 ## Completion Standard
 
-Before final response, know what changed, what was verified, and what was not verified. If tests could not run, say so directly.
+Inspect the final diff or rendered artifact and remove introduced debris before declaring completion. Know what changed, what was verified, and what was not verified. If tests could not run, say so directly.

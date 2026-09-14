@@ -1,0 +1,4 @@
+interface:
+  display_name: "Writing Prompt"
+  short_description: "Write lean, reliable agent prompts"
+  default_prompt: "Use $writing-prompt to create or edit this agent-facing prompt."
