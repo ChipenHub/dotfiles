@@ -30,6 +30,7 @@ Prefer a command that preserves information and is easy to inspect later.
 
 - Do not redirect stdout/stderr to `/dev/null`; output noise is cheaper than blindness.
 - Avoid trailing `| head` or `| tail` on expensive or non-idempotent commands. Prefer the producer's semantic limit, such as `rg -m`, `git log -n`, or a tool-native limit.
+- Use the Read tool instead of `head` or numeric `sed -n` ranges to read file lines.
 - Do not end shell commands with `&`. Use the runtime's session/background mechanism when backgrounding is truly needed.
 - Do not write source files with `cat <<EOF > file`. Use Codex file-edit tools, usually `apply_patch`.
 - For long inline scripts or heredocs, create a temporary script file and run it, instead of burying 80+ lines inside one shell command.

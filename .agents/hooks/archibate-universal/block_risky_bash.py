@@ -224,6 +224,32 @@ def blocks_shell_habits(command: str) -> None:
         emit_deny("BYPASS_DEVNULL_CHECK", "Do not redirect output to /dev/null; keep output visible to Codex.")
 
     if (
+        grep(
+            cmd_re("head")
+            + r"\s+(?:-\d+|-n\s*\d+|--lines(?:=|\s+)\d+)\s+[^\s|;&>]+",
+            command,
+        )
+        and not has("BYPASS_HEAD_READ_CHECK", command)
+    ):
+        emit_deny(
+            "BYPASS_HEAD_READ_CHECK",
+            "Use the Read tool with a line limit instead of head for reading a file.",
+        )
+
+    if (
+        grep(
+            cmd_re("sed")
+            + r"\s+-n\s+['\"]?\d+(?:,\d+)?p['\"]?\s+[^\s|;&>]+",
+            command,
+        )
+        and not has("BYPASS_SED_PRINT_CHECK", command)
+    ):
+        emit_deny(
+            "BYPASS_SED_PRINT_CHECK",
+            "Use the Read tool with an offset and limit instead of sed -n for reading file lines.",
+        )
+
+    if (
         grep(r"(?m)(^|[;&|()])\s*cat\b.*<<", command)
         and grep(r"(?m)(^|[;&|()])\s*cat\b.*(>\s*\S|>>\s*\S|\|\s*tee\b)", command)
         and not grep(r"\bgit\s+commit\b", command)

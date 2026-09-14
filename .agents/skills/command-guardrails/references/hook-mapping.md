@@ -15,6 +15,7 @@ title: Hook Mapping
 - `no-background-ampersand.sh` -> `block_risky_bash.py`: blocks shell backgrounding with `&`.
 - `no-pip-npm.sh` -> `block_risky_bash.py`: nudges `uv` and `pnpm` when available.
 - `no-head-tail-pipe.sh` -> `block_risky_bash.py`: adds one session-scoped advisory for trailing `| head` or `| tail`.
+- `no-head-read.sh` and `no-sed-print.sh` -> `block_risky_bash.py`: block line-based file reads that should use the Read tool.
 - `prefer-uv-run.sh` -> `remind_uv_python.py`: adds a post-command reminder for bare Python.
 - `reread-after-edit.sh` -> `post_edit_self_review.py`: adds code/doc self-audit context after `apply_patch`.
 
