@@ -74,7 +74,7 @@ Relevant files:
 - Text objects select forward and retain rectangle mode. `C-v` toggles rectangle selection with the cursor on the right edge; `j` / `k` keep its columns across short lines and wide Chinese characters.
 - `vip` selects a path: ASCII punctuation such as `/._:` stays inside it; whitespace, Han characters and Chinese punctuation split it. This is a custom path object, not Vim's paragraph object.
 - `Enter` without a selection selects the same path object and opens it; `S-Enter` selects or extends it without opening.
-- `y` copies, `p` pastes, `q` cancels copy mode.
+- `y` copies an active visual selection. Without one, Vim-style yanks such as `yy`, `yiw`, `yi(`, `ya(`, and their quote/bracket variants copy without leaving copy mode, then return the cursor to the first copied character. `p` pastes and `q` cancels copy mode.
 - `f` searches the selected text literally with `rg -F` in a popup rooted at the Git repository, or at the pane's current directory outside Git.
 - Layout changes (prefix `Space`, pane resizing, or terminal resizing) refresh every resized copy-mode pane, focused or not, after **300ms** without another layout change. Tracking uses hidden environment variables to avoid global redraws; stale timers do not start workers.
 - `.config/tmux/refresh_copy_mode.py` records the cursor's x/y and the frozen page's absolute history row **at refresh time**, exits and re-enters copy mode, then restores that row without switching focus. With history retained, appended output does not move the page. Positions are clamped when necessary. It does not match text, preserve selections, or restore a pre-resize content anchor. Output arriving after this one-shot refresh remains frozen.

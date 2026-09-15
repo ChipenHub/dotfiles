@@ -222,6 +222,10 @@ def pair_target(cells: list[Cell], cursor: int, action: str) -> tuple[int, int] 
 
 
 def run(pane: str, action: str) -> None:
+    yank = action.startswith("yank-")
+    if yank:
+        action = action.removeprefix("yank-")
+
     def tmux(*args: str) -> str:
         return subprocess.check_output(["tmux", *args], text=True)
 
@@ -283,12 +287,17 @@ def run(pane: str, action: str) -> None:
     else:
         send("selection-mode", "char")
         move(end)
+    if yank:
+        send("copy-selection-no-clear")
+        send("clear-selection")
+        move(start)
     tmux(*commands)
 
 
 if __name__ == "__main__":
     actions = {"b", "e", "w", "iw", "aw", "ip", "extend-path"}
     actions.update(prefix + name for prefix in ("i-", "a-") for name in PAIRS)
+    actions.update("yank-" + action for action in tuple(actions) if action.startswith(("i", "a")))
     if len(sys.argv) != 3 or sys.argv[2] not in actions:
         raise SystemExit(2)
     run(sys.argv[1], sys.argv[2])

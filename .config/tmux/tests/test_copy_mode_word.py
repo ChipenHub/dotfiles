@@ -385,6 +385,50 @@ class TmuxTests(unittest.TestCase):
         self.assertEqual(self.selection("i-double-quote"), "foo")
         self.assertEqual(self.cursor(), before)
 
+    def test_yank_text_objects_copy_and_return_to_start(self):
+        text = "xx (foo bar) yy"
+        self.load(text, column=text.index("bar") + 1)
+        with self.attached_client() as client:
+            for keys, expected, start in [
+                (["y", "i", "w"], "bar", text.index("bar")),
+                (["y", "i", "("], "foo bar", text.index("foo")),
+                (["y", "a", "("], "(foo bar)", text.index("(")),
+            ]:
+                with self.subTest(keys=keys):
+                    self.send("start-of-line")
+                    self.send("cursor-right", count=text.index("bar") + 1)
+                    self.tmux("set-buffer", "pending")
+                    self.tmux("send-keys", "-c", client, "-K", *keys)
+                    for _ in range(100):
+                        if self.tmux("show-buffer") == expected:
+                            break
+                        time.sleep(0.01)
+                    self.assertEqual(self.tmux("show-buffer"), expected)
+                    self.assertEqual(self.cursor(), f"{start},0,0")
+                    state = self.tmux(
+                        "display-message", "-p", "-t", self.pane,
+                        "#{pane_in_mode} #{selection_active}",
+                    ).strip()
+                    self.assertEqual(state, "1 0")
+
+    def test_double_yank_copies_line_and_returns_to_line_start(self):
+        text = "  foo bar"
+        self.load(text, column=6)
+        with self.attached_client() as client:
+            self.tmux("set-buffer", "pending")
+            self.tmux("send-keys", "-c", client, "-K", "y", "y")
+            for _ in range(100):
+                if self.tmux("show-buffer") == text + "\n":
+                    break
+                time.sleep(0.01)
+            self.assertEqual(self.tmux("show-buffer"), text + "\n")
+            self.assertEqual(self.cursor(), "0,0,0")
+            state = self.tmux(
+                "display-message", "-p", "-t", self.pane,
+                "#{pane_in_mode} #{selection_active}",
+            ).strip()
+            self.assertEqual(state, "1 0")
+
     def test_real_pair_keys(self):
         text = 'xx[({<"foo \'bar `baz` qux\' end">})]yy'
         self.load(text, column=text.index("baz") + 1)
