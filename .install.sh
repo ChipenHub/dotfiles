@@ -5,6 +5,7 @@ dotfiles_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 
 # 直接安装到 $HOME 下的目标。
 home_links=(
+  .gitconfig.shared
   .codex
   .claude
   .pi
@@ -22,6 +23,75 @@ config_links=(
   nvim
   tmux
 )
+
+install_git_include() {
+  # Keep automatic global writes local, never through a dotfiles symlink.
+  if [ -L "$HOME/.gitconfig" ]; then
+    printf 'Refusing to write through symlink: %s\n' "$HOME/.gitconfig" >&2
+    return 1
+  fi
+  if ! git config --file "$HOME/.gitconfig" --get-all include.path | grep -Fxq '~/.gitconfig.shared'; then
+    local config_tmp
+    config_tmp="$(mktemp "$HOME/.gitconfig.XXXXXX")"
+    printf '[include]\n\tpath = ~/.gitconfig.shared\n' > "$config_tmp"
+    if [ -f "$HOME/.gitconfig" ]; then
+      cat "$HOME/.gitconfig" >> "$config_tmp"
+    fi
+    mv "$config_tmp" "$HOME/.gitconfig"
+  fi
+}
+
+# Named targets install only their own links; no arguments only lists targets.
+if [ "$#" -eq 0 ]; then
+  printf 'Usage: %s <target ... | all>\n' "$0"
+  for name in "${home_links[@]}"; do
+    target="${name#.}"
+    [ "$name" != .gitconfig.shared ] || target=git
+    printf '  %s -> ~/%s\n' "$target" "$name"
+  done
+  for name in "${config_links[@]}"; do
+    printf '  %s -> ~/.config/%s\n' "$name" "$name"
+  done
+  exit 0
+fi
+
+if [ "$#" -ne 1 ] || [ "$1" != all ]; then
+  selected_paths=()
+  for target in "$@"; do
+    matched=false
+    for name in "${home_links[@]}" "${config_links[@]/#/.config/}"; do
+      key="${name#.}"
+      key="${key#config/}"
+      [ "$name" != .gitconfig.shared ] || key=git
+      if [ "$target" = "$key" ]; then
+        if [ -e "$HOME/$name" ] || [ -L "$HOME/$name" ]; then
+          if [ ! -L "$HOME/$name" ] || [ "$(readlink "$HOME/$name")" != "$dotfiles_dir/$name" ]; then
+            printf 'Refusing to overwrite: %s\n' "$HOME/$name" >&2
+            exit 1
+          fi
+        fi
+        selected_paths+=("$name")
+        matched=true
+        break
+      fi
+    done
+    if [ "$matched" = false ]; then
+      printf 'Unknown target: %s\n' "$target" >&2
+      exit 1
+    fi
+  done
+  for name in "${selected_paths[@]}"; do
+    mkdir -p "$(dirname "$HOME/$name")"
+    if [ ! -L "$HOME/$name" ]; then
+      ln -s "$dotfiles_dir/$name" "$HOME/$name"
+    fi
+    printf 'Linked: %s -> %s\n' "$HOME/$name" "$dotfiles_dir/$name"
+    if [ "$name" = .gitconfig.shared ]; then
+      install_git_include
+    fi
+  done
+  exit 0
+fi
 
 if ! command -v stow >/dev/null 2>&1; then
   echo "missing: stow" >&2
@@ -93,3 +163,5 @@ stow \
   --verbose=1 \
   "${ignore_args[@]}" \
   .
+
+install_git_include

@@ -1,0 +1,14 @@
+[filter "lfs"]
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true
+[core]
+	quotepath = false
+	pager = delta
+[interactive]
+	diffFilter = delta --color-only
+[delta]
+	side-by-side = true
+	wrap-max-lines = unlimited
+	paging = never

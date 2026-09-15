@@ -5,6 +5,11 @@
 # broot runtime artifacts
 .config/broot/launcher/
 
+# Machine-local Git settings
+.gitconfig
+.gitconfig.local
+.gitconfig.backup.*
+
 # Generated caches and local artifacts
 .DS_Store
 .cache/
