@@ -5,10 +5,16 @@
 # broot runtime artifacts
 .config/broot/launcher/
 
+<<<<<<< Updated upstream
 # Machine-local Git settings
 .gitconfig
 .gitconfig.local
 .gitconfig.backup.*
+=======
+# Hammerspoon: track configuration, not downloaded Spoons or runtime files
+.hammerspoon/*
+!.hammerspoon/init.lua
+>>>>>>> Stashed changes
 
 # Generated caches and local artifacts
 .DS_Store

@@ -9,6 +9,7 @@ home_links=(
   .codex
   .claude
   .pi
+  .hammerspoon
   .tmux.conf
   .emacs
   .emacs.custom.el
@@ -108,18 +109,51 @@ contains() {
   return 1
 }
 
+# 不带参数时只列出目标；all 保留原来的全量安装行为。
+if [ "$#" -eq 0 ]; then
+  echo "Usage: $0 <target> [target ...] | all"
+  for name in "${home_links[@]}"; do
+    printf '  %-18s %s\n' "${name#.}" "\$HOME/$name"
+  done
+  for name in "${config_links[@]}"; do
+    printf '  %-18s %s\n' "$name" "\$HOME/.config/$name"
+  done
+  exit 0
+fi
+
+if [ "$#" -ne 1 ] || [ "$1" != all ]; then
+  selected_home=()
+  selected_config=()
+  for target in "$@"; do
+    if contains ".$target" "${home_links[@]}"; then
+      selected_home+=(".$target")
+    elif contains "$target" "${config_links[@]}"; then
+      selected_config+=("$target")
+    else
+      echo "unknown target: $target (run $0 to list targets)" >&2
+      exit 1
+    fi
+  done
+  # Bash 3.2 treats empty arrays as unset under nounset.
+  home_links=(${selected_home[@]+"${selected_home[@]}"})
+  config_links=(${selected_config[@]+"${selected_config[@]}"})
+fi
+
 regex_escape() {
   printf '%s' "$1" | perl -pe 's/([\\.\[\]{}()+*?^$|])/\\$1/g'
 }
 
 
 ignore_args=()
+if [ "${#config_links[@]}" -eq 0 ]; then
+  ignore_args+=(--ignore='^\.config($|/)')
+fi
 
 # 顶层只允许 home_links 和 .config；其他仓库文件都不 stow。
 shopt -s nullglob dotglob
 for path in "$dotfiles_dir"/*; do
   name="$(basename "$path")"
-  if [ "$name" = ".config" ] || contains "$name" "${home_links[@]}"; then
+  if [ "$name" = ".config" ] || contains "$name" ${home_links[@]+"${home_links[@]}"}; then
     continue
   fi
   ignore_args+=(--ignore="^$(regex_escape "$name")($|/)")
@@ -128,7 +162,7 @@ done
 # .config 下面只允许 config_links。
 for path in "$dotfiles_dir/.config"/*; do
   name="$(basename "$path")"
-  if contains "$name" "${config_links[@]}"; then
+  if contains "$name" ${config_links[@]+"${config_links[@]}"}; then
     continue
   fi
   ignore_args+=(--ignore="^\.config/$(regex_escape "$name")($|/)")
@@ -138,10 +172,10 @@ shopt -u nullglob dotglob
 # Stow refuses absolute symlinks in a package. These are runtime-managed links,
 # so leave their installation to their owner.
 managed_roots=()
-for name in "${home_links[@]}"; do
+for name in ${home_links[@]+"${home_links[@]}"}; do
   managed_roots+=("$dotfiles_dir/$name")
 done
-for name in "${config_links[@]}"; do
+for name in ${config_links[@]+"${config_links[@]}"}; do
   managed_roots+=("$dotfiles_dir/.config/$name")
 done
 
@@ -156,10 +190,12 @@ done < <(find -H "${managed_roots[@]}" -type l -print0)
 
 mkdir -p "$HOME/.config"
 
+# 禁止目录折叠，避免把包含未选中配置的整个目录链接回去。
 stow \
   --dir="$dotfiles_dir" \
   --target="$HOME" \
   --restow \
+  --no-folding \
   --verbose=1 \
   "${ignore_args[@]}" \
   .

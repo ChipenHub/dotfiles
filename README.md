@@ -7,16 +7,20 @@ Personal terminal/editor setup centered on tmux path jumping and a lean Neovim w
 Run from the repo root:
 
 ```bash
-./.install.sh
+./.install.sh              # List available targets without installing
+./.install.sh hammerspoon  # Install only Hammerspoon
+./.install.sh tmux fish    # Install selected targets
+./.install.sh all          # Install / refresh the full whitelist
 ```
 
-The installer uses GNU Stow and only installs the explicit whitelist in `.install.sh`.
+The installer uses GNU Stow and only installs the selected targets from the explicit whitelist in `.install.sh`. Existing regular files must be backed up before installation; they are not overwritten.
 
 Home links:
 
 - `.codex`
 - `.claude`
 - `.pi`
+- `.hammerspoon`
 - `.tmux.conf`
 - `.emacs`
 - `.emacs.custom.el`
@@ -123,6 +127,12 @@ Useful keymaps:
 - Tags navigation: `gd`, `gD`, `gr`, `g]`, `g[`, native `C-t`.
 - Git: `[c` / `]c` previous/next changed hunk; `<leader>gs` Fugitive status; `<leader>gp` preview hunk; `<leader>gb` blame; `<leader>gd` diff current file.
 - Multicursor: `C-n` selects next occurrence.
+
+## Hammerspoon
+
+`.hammerspoon/init.lua` clamps movement and drag events to one macOS coordinate point inside each screen's left edge, preserving vertical movement and leaving click events untouched. It uses no polling timer or cursor warping. On Retina displays, a coordinate point can span multiple physical pixels. Direct cursor repositioning by other apps is not intercepted; this is not a system-level confinement guarantee.
+
+Enable Hammerspoon in **System Settings → Privacy & Security → Accessibility**, then restart Hammerspoon or choose **Reload Config**. Hammerspoon must remain running. Downloaded Spoons and runtime files are not tracked.
 
 ## Other useful config
 
