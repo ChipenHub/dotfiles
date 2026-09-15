@@ -77,7 +77,7 @@ abbr -a gc 'git commit -m'
 abbr -a ga 'git commit -am'
 abbr --add --position anywhere -- --force --force-with-lease
 
-function commit --description 'Commit staged changes with a Spark-generated message'
+function commit --description 'Commit staged changes with a Luna-generated message'
     set -l repo_check (git rev-parse --is-inside-work-tree 2>&1)
     if test $status -ne 0
         printf '%s\n' $repo_check >&2
@@ -101,7 +101,7 @@ function commit --description 'Commit staged changes with a Spark-generated mess
         git diff --cached --
         printf '%s\n' '</staged_diff>'
     end | pi \
-        --model openai-codex/gpt-5.3-codex-spark \
+        --model openai-codex/gpt-5.6-luna \
         --thinking off \
         --no-session \
         --no-tools \
@@ -117,13 +117,13 @@ function commit --description 'Commit staged changes with a Spark-generated mess
     end
 
     if test (count $message) -ne 1
-        echo 'Spark returned an invalid multiline commit message; no commit created.' >&2
+        echo 'Luna returned an invalid multiline commit message; no commit created.' >&2
         return 1
     end
 
     set message (string trim -- "$message")
     if not string match -rq '^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test): [a-z0-9]' -- "$message"
-        printf 'Spark returned an invalid commit message: %s\n' "$message" >&2
+        printf 'Luna returned an invalid commit message: %s\n' "$message" >&2
         return 1
     end
 
