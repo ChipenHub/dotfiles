@@ -263,26 +263,6 @@ def nvim_command(
     return command
 
 
-def find_nvim_in_pane(pane_id: str) -> str | None:
-    result = subprocess.run(
-        ["tmux", "show-options", "-pqv", "-t", pane_id, "@nvim_server"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    server = result.stdout.strip()
-    if result.returncode != 0 or not server:
-        return None
-
-    probe = subprocess.run(
-        ["nvim", "--server", server, "--remote-expr", "1"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    return server if probe.returncode == 0 else None
-
-
 def find_reusable_nvim(pane_id: str) -> tuple[str, str] | None:
     result = subprocess.run(
         [
@@ -385,37 +365,6 @@ def open_target(
     destination: str,
     exit_copy_on_same_pane: bool = False,
 ) -> None:
-    if destination == "current":
-        server = find_nvim_in_pane(pane_id)
-        if server is not None and open_in_nvim(
-            pane_id, server, path, line, column, end_line
-        ):
-            subprocess.run(
-                ["tmux", "send-keys", "-t", pane_id, "-X", "cancel"],
-                check=False,
-            )
-            return
-
-        session = subprocess.check_output(
-            ["tmux", "display-message", "-p", "-t", pane_id, "#{session_id}"],
-            text=True,
-        ).strip()
-        result = subprocess.run(
-            [
-                "tmux", "new-window", "-d", "-t", f"{session}:",
-                "-n", path.name, "-c", str(path if path.is_dir() else path.parent),
-                sys.executable, str(Path(__file__).resolve()),
-                "--edit-current", pane_id,
-                *nvim_command(path, line, column, end_line),
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if result.returncode != 0:
-            tmux_message(result.stderr.strip() or "could not open the path in the current pane")
-        return
-
     if destination == "pane":
         reusable_nvim = find_reusable_nvim(pane_id)
         if reusable_nvim is not None:
@@ -554,27 +503,7 @@ def run_chooser() -> int:
     return 0
 
 
-def run_current_editor() -> int:
-    source_pane = sys.argv[2]
-    editor_pane = os.environ["TMUX_PANE"]
-    swap = ["tmux", "swap-pane", "-d", "-Z", "-s", source_pane, "-t", editor_pane]
-    result = subprocess.run(swap, check=False)
-    if result.returncode != 0:
-        return result.returncode
-
-    try:
-        set_pane_name(editor_pane, Path(sys.argv[-1]).name)
-        subprocess.run(["tmux", "select-pane", "-t", editor_pane], check=False)
-        return subprocess.run(sys.argv[3:], check=False).returncode
-    finally:
-        subprocess.run(swap, check=False)
-        subprocess.run(["tmux", "select-pane", "-t", source_pane], check=False)
-
-
 def main() -> int:
-    if len(sys.argv) >= 4 and sys.argv[1] == "--edit-current":
-        return run_current_editor()
-
     if len(sys.argv) >= 2 and sys.argv[1] == "--choose":
         return run_chooser()
 
@@ -583,7 +512,7 @@ def main() -> int:
         return 2
 
     destination = sys.argv[2] if len(sys.argv) >= 3 else "pane"
-    if destination not in {"current", "pane", "window"}:
+    if destination not in {"pane", "window"}:
         tmux_message(f"invalid destination {destination!r}")
         return 2
 
