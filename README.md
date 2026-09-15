@@ -125,6 +125,6 @@ Useful keymaps:
 ## Other useful config
 
 - fish sets `EDITOR` and `VISUAL` to `nvim`.
-- fish abbreviations include `b -> nvim`, `cd -> z`, `find -> fd`, `s/ss/l -> eza`, and common git shortcuts.
+- fish abbreviations include `b -> nvim`; bare `b` or `nvim` opens the current directory. Other abbreviations include `cd -> z`, `find -> fd`, `s/ss/l -> eza`, and common git shortcuts.
 - `nnn` uses `.config/nnn/opener` so editable files stay in terminal Neovim, images preview with `chafa`, and videos do not accidentally open externally.
 - Karabiner, Emacs, Pi/Codex/Claude agent configs are tracked too, but they are secondary to the tmux + Neovim workflow.

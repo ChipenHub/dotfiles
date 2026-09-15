@@ -56,6 +56,15 @@ abbr -a l 'eza'
 # nvim
 abbr -a b 'nvim'
 
+function __execute_with_nvim_default
+    commandline -f expand-abbr
+    if string match -qr '^\s*nvim\s*$' -- (commandline)
+        commandline --replace 'nvim .'
+    end
+    commandline -f execute
+end
+bind \r __execute_with_nvim_default
+
 # clear
 abbr -a c 'clear'
 
