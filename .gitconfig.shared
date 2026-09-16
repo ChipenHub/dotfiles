@@ -10,5 +10,8 @@
 	diffFilter = delta --color-only
 [delta]
 	side-by-side = true
-	wrap-max-lines = unlimited
-	paging = never
+	hunk-header-style = file line-number syntax
+	width = variable
+	wrap-right-percent = 0.01
+	pager = ov
+	paging = always

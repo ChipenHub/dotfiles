@@ -1,0 +1,98 @@
+# Less-style key bindings. Unspecified actions retain ov defaults.
+QuitSmall: false
+
+KeyBind:
+  align_format:
+    - "ctrl+alt+f"
+  bottom:
+    - "End"
+    - ">"
+    - "G"
+  close_all_filter:
+    - "ctrl+alt+k"
+  close_doc:
+    - "alt+k"
+  convert_type:
+    - "ctrl+alt+t"
+  delimiter:
+    - "F8"
+  down:
+    - "e"
+    - "ctrl+e"
+    - "j"
+    - "J"
+    - "ctrl+j"
+    - "Enter"
+    - "Down"
+  edit:
+    - "v"
+  fixed_column:
+    - "alt+f"
+  follow_mode:
+    - "F"
+  goto:
+    - ":"
+  header_column:
+    - "ctrl+alt+d"
+  help:
+    - "h"
+    - "ctrl+alt+c"
+  jump_target:
+    - "alt+j"
+  line_number_mode:
+    - "alt+n"
+  logdoc:
+    - "ctrl+alt+e"
+  next_mark:
+    - "alt+>"
+  page_down:
+    - "PageDown"
+    - "ctrl+v"
+    - "alt+space"
+    - "f"
+    - "z"
+  page_half_down:
+    - "d"
+    - "ctrl+d"
+  page_half_up:
+    - "u"
+    - "ctrl+u"
+  page_up:
+    - "PageUp"
+    - "b"
+    - "alt+v"
+  plain_mode:
+    - "ctrl+F7"
+  previous_mark:
+    - "alt+<"
+  rainbow_mode:
+    - "ctrl+F4"
+  raw_format:
+    - "ctrl+alt+g"
+  reload:
+    - "R"
+    - "ctrl+r"
+  save_buffer:
+    - "s"
+  shrink_column:
+    - "alt+x"
+  sync:
+    - "r"
+    - "ctrl+l"
+  top:
+    - "Home"
+    - "g"
+    - "<"
+  up:
+    - "y"
+    - "Y"
+    - "ctrl+y"
+    - "k"
+    - "K"
+    - "ctrl+k"
+    - "Up"
+  vertical_header:
+    - "ctrl+alt+b"
+  watch:
+    - "T"
+    - "ctrl+alt+w"

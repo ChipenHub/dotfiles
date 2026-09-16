@@ -22,6 +22,7 @@ config_links=(
   kitty
   nnn
   nvim
+  ov
   tmux
 )
 
