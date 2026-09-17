@@ -94,7 +94,7 @@ Run their tests with `python3 -m unittest discover -s .config/tmux/tests -v`.
 - Split with cwd inherited: prefix `s` vertical, prefix `v` horizontal.
 - New window with cwd inherited: prefix `c` or `t`.
 - Preset layout: prefix `Space`; normalizes two/three/four-pane layouts around a wide right pane.
-- Window/session navigation: prefix `a` last window, prefix `A` last session, prefix `w` window tree, prefix `f` session tree.
+- Window/session navigation: prefix `q` previous window, prefix `a` last window, prefix `A` last session, prefix `w` window tree, prefix `f` session tree.
 
 ## Neovim basics
 
