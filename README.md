@@ -51,8 +51,8 @@ Relevant files:
 
 1. Enter tmux copy mode with `Esc`, `Enter`, or mouse wheel scroll.
 2. Move the copy cursor onto a path, or select a path with `v` / mouse drag.
-3. Press `Enter` to open it in Neovim.
-4. Press `O` to open it in a new tmux window instead of a split.
+3. Press `S-Enter` to select or extend the path without opening it.
+4. Press `Enter` to open it in a full-window Neovim, reusing one in the current session when possible.
 5. Press `Esc` to cancel an active search or selection; press `q` to exit copy mode.
 
 ### Behavior
@@ -62,9 +62,8 @@ Relevant files:
 - If the direct path does not exist, searches from the Git root.
 - Ignores `.git`, `.cache`, and `node_modules` during fallback search.
 - If multiple matches exist, opens an `fzf` chooser in a tmux popup.
-- If exactly one reusable Neovim server exists in the current tmux window, opens the file there.
-- When `Enter` reuses Neovim in the same pane, it exits copy mode so the jump is visible immediately.
-- Otherwise creates a 60% right split running `nvim`.
+- `Enter` reuses and switches to the only live Neovim pane that occupies an entire window in the current session.
+- Otherwise it creates a new tmux window.
 - Directories open through Oil when reusing an existing Neovim server.
 - Search status appears in tmux status-right.
 
