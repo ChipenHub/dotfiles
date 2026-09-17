@@ -9,6 +9,10 @@ leftEdgeMouseTap = hs.eventtap.new({
     mouseEvents.rightMouseDragged,
     mouseEvents.otherMouseDragged,
 }, function(event)
+    if event:getFlags().cmd then
+        return false
+    end
+
     local point = event:location()
     for _, screen in ipairs(hs.screen.allScreens()) do
         local frame = screen:fullFrame()
