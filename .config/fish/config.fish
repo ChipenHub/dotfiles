@@ -82,6 +82,14 @@ abbr -a g 'git'
 abbr -a gs 'git status'
 abbr -a gl 'git log'
 abbr -a gd 'git diff'
+begin
+    set -l i
+    for i in (seq 1 9)
+        abbr -a gd$i "git diff HEAD~$i"
+        abbr -a gl$i "git log -$i -p"
+    end
+end
+abbr -a gr 'git reset HEAD~1'
 abbr -a gc 'git commit -m'
 abbr -a ga 'git commit -am'
 abbr --add --position anywhere -- --force --force-with-lease

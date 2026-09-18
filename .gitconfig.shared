@@ -9,9 +9,8 @@
 [interactive]
 	diffFilter = delta --color-only
 [delta]
-	side-by-side = true
 	hunk-header-style = file line-number syntax
+	hunk-header-decoration-style = none
 	width = variable
-	wrap-right-percent = 0.01
 	pager = ov
 	paging = always
