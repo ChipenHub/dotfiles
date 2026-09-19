@@ -48,6 +48,7 @@ abbr -a aa 'cd /Volumes/disk1/CapCut/Android/'
 # uv
 abbr -a ur 'uv run' 
 abbr -a up 'uv pip'
+abbr -a urp 'uv run python3'
 
 # list
 abbr -a s 'eza -l'
