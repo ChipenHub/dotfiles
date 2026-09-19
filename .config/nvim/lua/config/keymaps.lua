@@ -27,9 +27,6 @@ for _, motion in ipairs(emacs_motions) do
     map("i", motion.lhs, motion.rhs, { desc = "Emacs: " .. motion.desc })
 end
 
-map("c", "<C-a>", "<Home>", { desc = "Emacs: Move to command start" })
-map("c", "<C-e>", "<End>", { desc = "Emacs: Move to command end" })
-
 map("i", "<C-k>", "<C-o>D", { desc = "Emacs: Kill to line end" })
 map("i", "<C-j>", "<CR>", { desc = "Emacs: Insert newline" })
 map("i", "<C-h>", "<BS>", { desc = "Emacs: Delete backward" })
