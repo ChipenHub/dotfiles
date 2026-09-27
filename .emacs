@@ -7,7 +7,13 @@
         ("nongnu" . "https://elpa.nongnu.org/nongnu/")
         ("melpa"  . "https://melpa.org/packages/")))
 
-;; (package-initialize)
+;; 启动时让 Emacs 的包管理和 URL 请求走本地代理。
+(setq url-proxy-services
+      '(("http"     . "127.0.0.1:7897")
+        ("https"    . "127.0.0.1:7897")
+        ("no_proxy" . "localhost,127.0.0.1")))
+
+(package-initialize)
 
 ;; 第一次启动或者本地没有软件包索引时，自动刷新索引。
 (unless package-archive-contents
@@ -131,107 +137,23 @@
    ("M-g i" . consult-imenu)
    ("M-y"   . consult-yank-pop)
    ("C-c r" . consult-ripgrep)
-   ("C-c f" . consult-find)));; set auto file place
-(setq custom-file "~/.emacs.custom.el")
-(load-file "~/.emacs.custom.el")
+   ("C-c f" . consult-find)))
 
-;; close the bell noise
-(setq ring-bell-function 'ignore)
-(set-face-attribute 'default nil
-                    :font "JetBrainsMono Nerd Font"
-                    :height 140)
 
-;; close welcome page
-(setq inhibit-startup-screen t)
+;;; project -------------------------------------------------------------------
 
-;; ace-window
-(global-set-key (kbd "M-o") #'ace-window)
-
-;; kill buffer shortcut
-(global-set-key (kbd "C-x C-k") #'kill-current-buffer)
-
-;; melpa settings
-(require 'package)
-(setq package-archives
-      '(("gnu"   . "https://elpa.gnu.org/packages/")
-        ("nongnu" . "https://elpa.nongnu.org/nongnu/")
-        ("melpa" . "https://melpa.org/packages/")))
-(package-initialize)
-
-;; initial fragment config
-(add-to-list 'default-frame-alist '(width . 200))
-(add-to-list 'default-frame-alist '(height . 50))
-
-;; save option off
-(setq make-backup-files nil)
-(setq auto-save-default nil)
-
-;; fragment size
-(setq-default indent-tabs-mode nil)
-(setq-default tab-width 4)
-(setq-default standard-indent 4)
-(setq-default c-basic-offset 4)
-
-;; display settings
-(column-number-mode 1)
-(global-display-line-numbers-mode 1)
-(tool-bar-mode 0)
-(column-number-mode 1)
-
-;; marginalia note of cordination
-(use-package marginalia
-  :ensure t
-  :init
-  (marginalia-mode))
-
-;; srolling~
-(pixel-scroll-precision-mode 1)
-(use-package ultra-scroll
-  :ensure t
-  :init
-  (ultra-scroll-mode 1))
-
-;; divider
-(setq window-divider-default-right-width 2)
-(setq window-divider-default-bottom-width 2)
-(window-divider-mode 1)
-
-;; ido everywhere
-(require 'ido)
-
-(setq ido-enable-flex-matching t
-      ido-everywhere t
-      ido-case-fold t
-      ido-use-virtual-buffers t
-      ido-create-new-buffer 'always)
-(ido-mode 1)
-(recentf-mode 1)
-(global-set-key (kbd "C-x b") #'ido-switch-buffer)
-(global-set-key (kbd "C-x 4 b") #'ido-switch-buffer-other-window)
-(global-set-key (kbd "C-x 5 b") #'ido-switch-buffer-other-frame)
-
-;; enhance find: consult
-;; Consult
-(use-package consult
-  :ensure t
-  :bind
-  (("C-s"     . consult-line)
-   ("M-g g"   . consult-goto-line)
-   ("M-g i"   . consult-imenu)
-   ("M-y"     . consult-yank-pop)
-   ("C-c r"   . consult-ripgrep)
-   ("C-c f"   . consult-find)))
-
-;; projecfile: auto recognize your project root dir
 (use-package projectile
   :init
   (projectile-mode 1)
   :bind-keymap
   ("C-c p" . projectile-command-map))
 
-;; 自动保存到原文件
+
+;;; file refresh / autosave ---------------------------------------------------
+
+;; 自动保存到原文件。
 (auto-save-visited-mode 1)
 (setq auto-save-visited-interval 3)
 
-;; 文件被外部修改时自动刷新
+;; 文件被外部修改时自动刷新。
 (global-auto-revert-mode 1)
