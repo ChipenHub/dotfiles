@@ -45,6 +45,13 @@ class WordTests(unittest.TestCase):
             with self.subTest(text=text, position=position):
                 self.assertEqual(self.select(text, position, "aw"), expected)
 
+    def test_git_revision_word_boundaries(self):
+        for left, right in [("(", "),"), ("[", "]"), ("prefix/", "~1"),
+                            ("prefix_", "-suffix"), ("中文：", "，后文")]:
+            text = left + "abc123" + right
+            with self.subTest(text=text):
+                self.assertEqual(self.select(text, len(left) + 2, "iw"), "abc123")
+
     def test_path_boundaries(self):
         for punctuation in "：，。！？；、（）【】《》「」『』“”‘’…—﹐﹕﹙﹚":
             text = f"你好{punctuation}/tmp/a_b.py:12{punctuation}其他"
@@ -279,6 +286,39 @@ class TmuxTests(unittest.TestCase):
     def test_around_leading_whitespace(self):
         self.load("foo  bar", column=6)
         self.assertEqual(self.selection("aw"), "  bar")
+
+    def test_s_opens_git_show_window_and_closes_on_quit(self):
+        revision = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], text=True).strip()
+        self.load(f"({revision}),", column=3)
+        self.tmux("set-environment", "-g", "GIT_PAGER", "less -R")
+        before = set(self.tmux("list-windows", "-F", "#{window_id}").splitlines())
+        try:
+            with self.attached_client() as client:
+                self.tmux("send-keys", "-c", client, "-K", "s")
+                for _ in range(100):
+                    created = set(self.tmux("list-windows", "-F", "#{window_id}").splitlines()) - before
+                    if created:
+                        break
+                    time.sleep(0.02)
+                self.assertEqual(len(created), 1, "s did not create a window")
+                window = created.pop()
+                for _ in range(100):
+                    output = self.tmux("capture-pane", "-p", "-t", window)
+                    if "commit " in output:
+                        break
+                    time.sleep(0.02)
+                self.assertIn("commit ", output)
+                self.assertEqual(self.tmux("display-message", "-p", "-c", client, "#{window_id}").strip(), window)
+                self.tmux("send-keys", "-t", window, "q")
+                for _ in range(100):
+                    if window not in self.tmux("list-windows", "-F", "#{window_id}").splitlines():
+                        break
+                    time.sleep(0.02)
+                self.assertNotIn(window, self.tmux("list-windows", "-F", "#{window_id}").splitlines())
+        finally:
+            self.tmux("set-environment", "-gu", "GIT_PAGER")
+            for window in set(self.tmux("list-windows", "-F", "#{window_id}").splitlines()) - before:
+                self.tmux("kill-window", "-t", window)
 
     def test_path_selection(self):
         self.load("路径：/tmp/a_b.py:12，后文", column=7)

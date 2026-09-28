@@ -43,6 +43,7 @@ Relevant files:
 - `.tmux.conf`
 - `.config/tmux/open-path`
 - `.config/tmux/copy-mode-enter`
+- `.config/tmux/copy-mode-git-show`
 - `.config/tmux/copy_mode_word.py`
 - `.config/nvim/lua/config/tmux.lua`
 
@@ -52,7 +53,8 @@ Relevant files:
 2. Move the copy cursor onto a path, or select a path with `v` / mouse drag.
 3. Press `S-Enter` to select or extend the path without opening it.
 4. Press `Enter` to open it in a full-window Neovim, reusing one in the current session when possible.
-5. Press `Esc` to cancel an active search or selection; press `q` to exit copy mode.
+5. Press `s` on a Git revision to run `git show` in a new window; leaving the command closes the window.
+6. Press `Esc` to cancel an active search or selection; press `q` to exit copy mode.
 
 ### Behavior
 
@@ -68,6 +70,7 @@ Relevant files:
 
 ### Copy-mode helpers
 
+- `H` / `M` / `L` move to 15% / 50% / 85% of the visible pane.
 - `[` / `]` move by paragraph, matching `{` / `}`.
 - `b` / `e` / `w` use Vim-style word boundaries, with `_` as punctuation and each Han character or Chinese punctuation mark as a separate unit. Numeric prefixes such as `3w` work too.
 - `viw` selects the current word, punctuation unit, or whitespace run.
@@ -77,6 +80,7 @@ Relevant files:
 - Text objects select forward and retain rectangle mode. `C-v` toggles rectangle selection with the cursor on the right edge; `j` / `k` keep its columns across short lines and wide Chinese characters.
 - `vip` selects a path: ASCII punctuation such as `/._:` stays inside it; whitespace, Han characters and Chinese punctuation split it. This is a custom path object, not Vim's paragraph object.
 - `Enter` without a selection selects the same path object and opens it; `S-Enter` selects or extends it without opening.
+- `s` selects the current word, stopping at punctuation (including `_`, `-` and `/`), and accepts only 4–64 hexadecimal characters (a commit hash or abbreviation). It opens `git show <revision>` in a new tmux window, which closes when the command exits.
 - `y` copies an active visual selection. Without one, Vim-style yanks such as `yy`, `yiw`, `yi(`, `ya(`, and their quote/bracket variants copy without leaving copy mode, then return the cursor to the first copied character. `p` pastes and `q` cancels copy mode.
 - `:` opens a one-line command prompt and runs the command in a temporary pane occupying the bottom 30%. Commands lasting at least three seconds close with the pane when they exit; quicker results wait for any key so they remain readable.
 - Layout changes (prefix `Space`, pane resizing, or terminal resizing) refresh every resized copy-mode pane, focused or not, after **300ms** without another layout change. Tracking uses hidden environment variables to avoid global redraws; stale timers do not start workers.
