@@ -9,10 +9,18 @@ home_links=(
   .codex
   .claude
   .pi
+  .omp
   .hammerspoon
   .tmux.conf
   .emacs
   .emacs.custom.el
+)
+
+# OMP keeps credentials and runtime state here; link only managed configuration.
+omp_links=(
+  .omp/agent/keybindings.yml
+  .omp/agent/skills
+  .omp/agent/extensions
 )
 
 # 安装到 $HOME/.config 下的目标，对应仓库里的 .config/<name>。
@@ -66,13 +74,17 @@ if [ "$#" -ne 1 ] || [ "$1" != all ]; then
       key="${key#config/}"
       [ "$name" != .gitconfig.shared ] || key=git
       if [ "$target" = "$key" ]; then
-        if [ -e "$HOME/$name" ] || [ -L "$HOME/$name" ]; then
-          if [ ! -L "$HOME/$name" ] || [ "$(readlink "$HOME/$name")" != "$dotfiles_dir/$name" ]; then
-            printf 'Refusing to overwrite: %s\n' "$HOME/$name" >&2
-            exit 1
+        paths=("$name")
+        [ "$name" != .omp ] || paths=("${omp_links[@]}")
+        for path in "${paths[@]}"; do
+          if [ -e "$HOME/$path" ] || [ -L "$HOME/$path" ]; then
+            if [ ! -L "$HOME/$path" ] || [ "$(readlink "$HOME/$path")" != "$dotfiles_dir/$path" ]; then
+              printf 'Refusing to overwrite: %s\n' "$HOME/$path" >&2
+              exit 1
+            fi
           fi
-        fi
-        selected_paths+=("$name")
+        done
+        selected_paths+=("${paths[@]}")
         matched=true
         break
       fi
@@ -145,7 +157,9 @@ regex_escape() {
 }
 
 
-ignore_args=()
+# OMP uses the same explicit leaf links for named and full installs.
+# Its absolute links and local runtime state must not be managed by Stow.
+ignore_args=(--ignore='^\.omp($|/)')
 if [ "${#config_links[@]}" -eq 0 ]; then
   ignore_args+=(--ignore='^\.config($|/)')
 fi
@@ -200,5 +214,7 @@ stow \
   --verbose=1 \
   "${ignore_args[@]}" \
   .
+
+bash "$dotfiles_dir/.install.sh" omp
 
 install_git_include

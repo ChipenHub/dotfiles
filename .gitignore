@@ -14,6 +14,14 @@
 .hammerspoon/*
 !.hammerspoon/init.lua
 
+# OMP: track keybindings and shared capabilities, not credentials or runtime state
+.omp/*
+!.omp/agent/
+.omp/agent/*
+!.omp/agent/keybindings.yml
+!.omp/agent/skills
+!.omp/agent/extensions
+
 # Generated caches and local artifacts
 .DS_Store
 .cache/

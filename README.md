@@ -9,6 +9,7 @@ Run from the repo root:
 ```bash
 ./.install.sh              # List available targets without installing
 ./.install.sh hammerspoon  # Install only Hammerspoon
+./.install.sh omp          # Link OMP keybindings and shared skills/extensions only
 ./.install.sh tmux fish    # Install selected targets
 ./.install.sh all          # Install / refresh the full whitelist
 ```
@@ -20,6 +21,7 @@ Home links:
 - `.codex`
 - `.claude`
 - `.pi`
+- `.omp` (only the three managed entries below, for both `omp` and `all`)
 - `.hammerspoon`
 - `.tmux.conf`
 - `.emacs`
@@ -33,6 +35,25 @@ Home links:
 - `nnn`
 - `nvim`
 - `tmux`
+
+## OMP
+
+OMP follows `.pi`'s layout: `.omp/agent/keybindings.yml` contains the compatible
+editor/selection bindings, while `skills` and `extensions` link to
+`.agents/skills` and `.agents/hooks`. `./.install.sh omp` links these three entries
+into an existing `~/.omp/agent` without replacing the directory or local settings.
+Existing conflicting files or links are refused.
+`./.install.sh all` excludes `.omp` from Stow and runs the same `omp` installer,
+so switching between individual and full installs preserves link ownership.
+
+`Ctrl+P/N` navigate the editor and selections instead of cycling models;
+`Ctrl+J` inserts a newline. Pi's `tui.altScreen.*`, `app.models.toggleProvider`,
+and `app.session.toggleNamedFilter` have no matching actions in OMP 18.4.2 and
+are not copied. OMP's temporary model picker (`Alt+P`) remains available.
+
+`config.yml`, credentials, databases, sessions, caches, and logs remain local
+and are excluded from Git. Restart OMP after installation to load the bindings
+and shared extensions.
 
 ## tmux path jump
 
@@ -142,4 +163,4 @@ Enable Hammerspoon in **System Settings → Privacy & Security → Accessibility
 - fish sets `EDITOR` and `VISUAL` to `nvim`.
 - fish abbreviations include `b -> nvim`; bare `b` or `nvim` opens the current directory. Other abbreviations include `cd -> z`, `find -> fd`, `s/ss/l -> eza`, and common git shortcuts.
 - `nnn` uses `.config/nnn/opener` so editable files stay in terminal Neovim, images preview with `chafa`, and videos do not accidentally open externally.
-- Karabiner, Emacs, Pi/Codex/Claude agent configs are tracked too, but they are secondary to the tmux + Neovim workflow.
+- Karabiner, Emacs, Pi/OMP/Codex/Claude agent configs are tracked too, but they are secondary to the tmux + Neovim workflow.
