@@ -272,7 +272,7 @@ def find_reusable_nvim(pane_id: str) -> tuple[str, str] | None:
             "-t",
             pane_id,
             "-F",
-            "#{pane_id}\t#{window_panes}\t#{@nvim_server}",
+            "#{pane_id}\t#{window_id}\t#{window_panes}\t#{@nvim_server}",
         ],
         capture_output=True,
         text=True,
@@ -281,11 +281,13 @@ def find_reusable_nvim(pane_id: str) -> tuple[str, str] | None:
     if result.returncode != 0:
         return None
 
-    candidates: list[tuple[str, str]] = []
+    source_window = ""
+    candidates: list[tuple[str, str, str, str]] = []
     for entry in result.stdout.splitlines():
-        candidate_pane, _, remainder = entry.partition("\t")
-        window_panes, _, server = remainder.partition("\t")
-        if window_panes != "1" or not server:
+        candidate_pane, window_id, window_panes, server = entry.split("\t", 3)
+        if candidate_pane == pane_id:
+            source_window = window_id
+        if not server:
             continue
         probe = subprocess.run(
             ["nvim", "--server", server, "--remote-expr", "1"],
@@ -294,9 +296,22 @@ def find_reusable_nvim(pane_id: str) -> tuple[str, str] | None:
             check=False,
         )
         if probe.returncode == 0:
-            candidates.append((candidate_pane, server))
+            candidates.append((candidate_pane, window_id, window_panes, server))
 
-    return candidates[0] if len(candidates) == 1 else None
+    for candidate_pane, _, _, server in candidates:
+        if candidate_pane == pane_id:
+            return candidate_pane, server
+
+    same_window = [candidate for candidate in candidates if candidate[1] == source_window]
+    if len(same_window) == 1:
+        candidate_pane, _, _, server = same_window[0]
+        return candidate_pane, server
+
+    whole_window = [candidate for candidate in candidates if candidate[2] == "1"]
+    if len(whole_window) == 1:
+        candidate_pane, _, _, server = whole_window[0]
+        return candidate_pane, server
+    return None
 
 
 def open_in_nvim(
@@ -312,7 +327,12 @@ def open_in_nvim(
         oil_expression = json.dumps("require('oil').open(_A)")
         expression = f"luaeval({oil_expression}, {path_literal})"
     else:
-        expression = f"execute('hide edit ' . fnameescape({path_literal}))"
+        buffer_number = f"bufnr({path_literal})"
+        expression = (
+            f"execute(buflisted({buffer_number}) "
+            f"? 'hide buffer ' . {buffer_number} "
+            f": 'hide edit ' . fnameescape({path_literal}))"
+        )
     result = subprocess.run(
         ["nvim", "--server", server, "--remote-expr", expression],
         capture_output=True,

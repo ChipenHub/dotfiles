@@ -91,6 +91,7 @@ Relevant files:
 
 ### Copy-mode helpers
 
+- `Alt+u` / `Alt+d` enter copy mode and scroll up / down half a page. In a pane running Pi, tmux passes these keys through to Pi instead.
 - `H` / `M` / `L` move to 15% / 50% / 85% of the visible pane.
 - `[` / `]` move by paragraph, matching `{` / `}`.
 - `b` / `e` / `w` use Vim-style word boundaries, with `_` as punctuation and each Han character or Chinese punctuation mark as a separate unit. Numeric prefixes such as `3w` work too.
@@ -102,7 +103,7 @@ Relevant files:
 - `vip` selects a path: ASCII punctuation such as `/._:` stays inside it; whitespace, Han characters and Chinese punctuation split it. This is a custom path object, not Vim's paragraph object.
 - `Enter` without a selection selects the same path object and opens it; `S-Enter` selects or extends it without opening.
 - `s` selects the current word, stopping at punctuation (including `_`, `-` and `/`), and accepts only 4–64 hexadecimal characters (a commit hash or abbreviation). It opens `git show <revision>` in a new tmux window, which closes when the command exits.
-- `y` copies an active visual selection. Without one, Vim-style yanks such as `yy`, `yiw`, `yi(`, `ya(`, and their quote/bracket variants copy without leaving copy mode, then return the cursor to the first copied character. `p` pastes and `q` cancels copy mode.
+- `y` copies an active visual selection. Without one, Vim-style yanks such as `yy`, `yiw`, `yip`, `yi(`, `ya(`, and their quote/bracket variants copy without leaving copy mode, then return the cursor to the first copied character. `p` pastes and `q` cancels copy mode.
 - `:` opens a one-line command prompt and runs the command in a temporary pane occupying the bottom 30%. Commands lasting at least three seconds close with the pane when they exit; quicker results wait for any key so they remain readable.
 - Layout changes (prefix `Space`, pane resizing, or terminal resizing) refresh every resized copy-mode pane, focused or not, after **300ms** without another layout change. Tracking uses hidden environment variables to avoid global redraws; stale timers do not start workers.
 - `.config/tmux/refresh_copy_mode.py` records the cursor's x/y and the frozen page's absolute history row **at refresh time**, exits and re-enters copy mode, then restores that row without switching focus. With history retained, appended output does not move the page. Positions are clamped when necessary. It does not match text, preserve selections, or restore a pre-resize content anchor. Output arriving after this one-shot refresh remains frozen.

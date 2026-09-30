@@ -451,6 +451,25 @@ class TmuxTests(unittest.TestCase):
                     ).strip()
                     self.assertEqual(state, "1 0")
 
+    def test_yank_path_copies_and_returns_to_path_start(self):
+        text = "xx /tmp/a_b.py:12 yy"
+        start = text.index("/")
+        self.load(text, column=text.index("a_b") + 1)
+        with self.attached_client() as client:
+            self.tmux("set-buffer", "pending")
+            self.tmux("send-keys", "-c", client, "-K", "y", "i", "p")
+            for _ in range(100):
+                if self.tmux("show-buffer") == "/tmp/a_b.py:12":
+                    break
+                time.sleep(0.01)
+            self.assertEqual(self.tmux("show-buffer"), "/tmp/a_b.py:12")
+            self.assertEqual(self.cursor(), f"{start},0,0")
+            state = self.tmux(
+                "display-message", "-p", "-t", self.pane,
+                "#{pane_in_mode} #{selection_active}",
+            ).strip()
+            self.assertEqual(state, "1 0")
+
     def test_double_yank_copies_line_and_returns_to_line_start(self):
         text = "  foo bar"
         self.load(text, column=6)
