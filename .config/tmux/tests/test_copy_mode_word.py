@@ -287,10 +287,14 @@ class TmuxTests(unittest.TestCase):
         self.load("foo  bar", column=6)
         self.assertEqual(self.selection("aw"), "  bar")
 
-    def test_s_opens_git_show_window_and_closes_on_quit(self):
+    @unittest.skipUnless(shutil.which("ov"), "ov is required")
+    def test_s_opens_git_show_with_ov_and_closes_on_quit(self):
+        self.test_s_opens_git_show_window_and_closes_on_quit(pager="ov")
+
+    def test_s_opens_git_show_window_and_closes_on_quit(self, pager="less -R"):
         revision = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], text=True).strip()
         self.load(f"({revision}),", column=3)
-        self.tmux("set-environment", "-g", "GIT_PAGER", "less -R")
+        self.tmux("set-environment", "-g", "GIT_PAGER", pager)
         before = set(self.tmux("list-windows", "-F", "#{window_id}").splitlines())
         try:
             with self.attached_client() as client:

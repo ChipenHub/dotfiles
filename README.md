@@ -1,5 +1,143 @@
 # Dotfiles
 
+## tmux shortcut cheat sheet
+
+Based on `.tmux.conf`. `Prefix` = `Ctrl+s`, followed by the next key within **500ms**. `Alt+…` shortcuts need no prefix; uppercase letters mean **Shift** is held.
+
+### Panes, windows, and sessions
+
+| Action | Prefix, then | Without prefix |
+| --- | --- | --- |
+| Focus pane left / down / up / right | `h` / `j` / `k` / `l` | `Alt+h` / `Alt+j` / `Alt+k` / `Alt+l` |
+| Resize pane left / down / up / right by one cell | — | `Alt+H` / `Alt+J` / `Alt+K` / `Alt+L` |
+| Swap pane left / down / up / right | `H` / `J` / `K` / `L` | — |
+| Toggle pane zoom | `Ctrl+s` (i.e. press `Ctrl+s` twice) | — |
+| Cycle preset layout | `Space` | `Alt+Space` |
+| Split top/bottom; new bottom pane gets 20% | `s` | `Alt+s` |
+| Split left/right | `v` | `Alt+v` |
+| Close current pane | `x` | `Alt+x` |
+| Close all other panes in this window | `0` | `Alt+0` |
+| Move pane to its own window | `b` | — |
+| Move pane into another window (prompt) | `m` | — |
+| New window | `c` or `t` | `Alt+c` or `Alt+t` |
+| Previous / next window | `p` / `n` | `Alt+p` / `Alt+n` |
+| Toggle last window | `a` or `;` | `Alt+;` |
+| Window tree | `w` | `Alt+w` |
+| Close current window | `X` | — |
+| Toggle last session | `A` | — |
+| Session tree | `f` | — |
+| Rename session | `.` | — |
+| Enter copy mode | `Esc` or `Enter` | `Alt+[` |
+| Paste tmux buffer | `P` | — |
+
+Splits and new windows inherit the current directory. Pane focus stops at window edges. Closing panes/windows above does not ask for confirmation.
+
+### Copy mode: navigation and search
+
+All keys below are pressed **without the prefix** while in copy mode.
+
+| Keys | Action |
+| --- | --- |
+| `Alt+u` / `Alt+d` | Scroll up / down half a page; also enter copy mode from normal mode (passed through to Pi instead when Pi is running in the pane) |
+| `h` / `j` / `k` / `l` | Move cursor left / down / up / right |
+| `Ctrl+a` / `Ctrl+e` | Start / end of line |
+| `H` / `M` / `L` | Move to roughly 15% / 50% / 85% of the visible pane |
+| `b` / `e` / `w` | Previous word start / word end / next word start; counts such as `3w` work |
+| `[` / `]` | Previous / next paragraph |
+| `/` / `?` | Search backward (older history) / forward (newer output) |
+| `n` / `N` | Repeat search / search in the opposite direction |
+| `Esc` | Cancel path search and clear selection; stay in copy mode |
+| `q` | Exit copy mode |
+
+Scrolling up with the mouse enters copy mode in normal shell output; alternate-screen or mouse-aware applications may handle scrolling themselves.
+
+### Copy mode: selection, copying, and path jumping
+
+| Keys | Action |
+| --- | --- |
+| `v` / `V` | Begin character / line selection |
+| `Ctrl+v` | Toggle rectangle selection |
+| `A` | Append to selection |
+| `d` or `Ctrl+c` | Clear selection |
+| `viw` / `vaw` | Select word / word with adjacent whitespace |
+| `vip` | Select path (not a paragraph) |
+| `vi"` / `va"` | Select inside / around quotes; single quotes and backticks also work |
+| `vi(` / `va(` | Select inside / around a balanced block; either bracket of `()`, `[]`, `{}`, `<>` works; `b` / `B` alias parentheses / braces |
+| `y` | Copy active selection, staying in copy mode |
+| `yy` | With no selection, copy current line |
+| `yiw` / `yaw` / `yip` | With no selection, copy word / word with whitespace / path |
+| `yi"` / `ya"`, `yi(` / `ya(` | With no selection, copy inside / around quotes or blocks; same variants as selection |
+| `D` | Copy through end of line |
+| `Ctrl+j` | Copy selection without clearing it |
+| `p` | Paste tmux buffer |
+| `Shift+Enter` | Select or extend path without opening it |
+| `Enter` | Open selected path, or path under cursor, in full-window Neovim |
+| `s` | Open `git show` for the hexadecimal commit hash under cursor in a temporary window |
+| Mouse drag / double-click / triple-click | Copy selection / word / line; clear highlight and stay in copy mode |
+| Single click | Clear selection and move cursor to clicked cell |
+
+Word objects split on punctuation (including `_`) and individual Han characters; path objects retain ASCII punctuation such as `/._:`. Operator yanks (`yy`, `yi…`, `ya…`) stay in copy mode and return the cursor to the first copied character.
+
+## Neovim shortcut cheat sheet
+
+Based on `.config/nvim/lua/config/keymaps.lua` and `.config/nvim/lua/plugins/`. `Leader` = `Space`; press leader sequences in Normal mode unless noted. `Meta` / `Alt` = Option in this Kitty setup. Unlike tmux shortcuts, these depend on the current Neovim mode.
+
+### Insert mode
+
+| Keys | Action |
+| --- | --- |
+| `Ctrl+p` / `Ctrl+n` | Move up / down |
+| `Ctrl+f` / `Ctrl+b` | Move right / left one character |
+| `Alt+b` | Move backward one word without leaving Insert mode |
+| `Ctrl+a` / `Ctrl+e` | Move to line start / end |
+| `Ctrl+k` | Delete through end of line |
+| `Ctrl+j` | Insert newline |
+| `Ctrl+h` / `Ctrl+d` | Delete backward / forward |
+| `Ctrl+Space` | Leave Insert mode and begin Visual selection |
+| `Esc` | Return to Normal mode |
+
+### Normal mode: files, windows, and buffers
+
+| Keys | Action |
+| --- | --- |
+| `Space w` | Save all files (also works in Visual mode) |
+| `q` | Close current window if multiple/floating; otherwise save modified file and close buffer or quit |
+| `-` | Open parent directory in Oil |
+| `Ctrl+h` / `Ctrl+j` / `Ctrl+k` / `Ctrl+l` | Focus window left / down / up / right |
+| `Shift+Up` / `Shift+Down` | Increase / decrease window height |
+| `Shift+Left` / `Shift+Right` | Increase / decrease window width |
+| `[b` / `]b` | Previous / next buffer; accepts a count |
+| `[B` / `]B` | First / last listed buffer; count selects Nth from that end |
+| `gb` or `gB` | Switch to alternate buffer |
+| `Space bd` | Delete current buffer |
+| `Esc` | Clear search highlighting |
+| `gq` | Record macro (original `q` function) |
+| `Ctrl+\` | Toggle floating terminal (also works in Terminal mode) |
+
+### Normal mode: code and Git
+
+| Keys | Action |
+| --- | --- |
+| `gd` / `gD` | Go to definition / declaration via scope-aware tags, falling back to native motions |
+| `gr` | Find references with ripgrep and show quickfix results |
+| `g]` | List exact tag matches for symbol |
+| `g[` or `Ctrl+t` | Return to previous tag-stack position |
+| `[c` / `]c` | Previous / next Git hunk (native motions in diff mode) |
+| `Space gs` | Open Fugitive Git status |
+| `Space gp` | Preview current Git hunk |
+| `Space gb` | Show full blame for current line |
+| `Space gd` | Diff current file against HEAD |
+| `Ctrl+n` | Select next occurrence with multicursor (also works in Visual mode) |
+
+### Visual and Terminal modes
+
+| Mode | Keys | Action |
+| --- | --- | --- |
+| Visual | `Space <` / `Space >` | Indent left / right and keep selection |
+| Visual | `J` / `K` | Move selected lines down / up and reindent |
+| Visual | `q` | Return to Normal mode |
+| Terminal | `Esc Esc` | Leave terminal input mode for Normal mode |
+
 Personal terminal/editor setup centered on tmux path jumping and a lean Neovim workflow.
 
 ## Install / refresh
