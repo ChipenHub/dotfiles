@@ -76,6 +76,7 @@ All keys below are pressed **without the prefix** while in copy mode.
 | `n` / `N` | Repeat search / search in the opposite direction |
 | `Esc` | Cancel path search and clear selection; stay in copy mode |
 | `q` | Exit copy mode |
+| `Alt+x` | Close the current tmux pane and its process, not just copy mode |
 
 Scrolling up with the mouse enters copy mode in normal shell output; alternate-screen or mouse-aware applications may handle scrolling themselves.
 

@@ -255,6 +255,28 @@ class TmuxTests(unittest.TestCase):
             time.sleep(0.01)
         self.assertEqual(actual, expected, keys)
 
+    def test_alt_x_closes_only_current_pane_in_normal_and_copy_modes(self):
+        for mode in (None, "vi", "emacs"):
+            with self.subTest(mode=mode):
+                self.load("pane to close")
+                self.send("cancel")
+                self.tmux("set-option", "-w", "-t", self.pane, "mode-keys", mode or "vi")
+                window = self.tmux("display-message", "-p", "-t", self.pane, "#{window_id}").strip()
+                other = self.tmux("split-window", "-d", "-h", "-t", self.pane, "-P", "-F", "#{pane_id}", "sleep 3600").strip()
+                self.addCleanup(self.tmux, "kill-window", "-t", window)
+                if mode:
+                    self.tmux("copy-mode", "-t", self.pane)
+                    self.assertEqual(self.tmux("display-message", "-p", "-t", self.pane, "#{pane_in_mode}").strip(), "1")
+                with self.attached_client() as client:
+                    self.tmux("send-keys", "-c", client, "-K", "M-x")
+                    for _ in range(100):
+                        panes = self.tmux("list-panes", "-t", window, "-F", "#{pane_id}").splitlines()
+                        if self.pane not in panes:
+                            self.pane = None
+                            break
+                        time.sleep(0.01)
+                    self.assertEqual(panes, [other])
+
     def test_chinese_motion_cells(self):
         self.load("你好：123_456，abc")
         for expected in [2, 4, 6, 9, 10, 13, 15]:
