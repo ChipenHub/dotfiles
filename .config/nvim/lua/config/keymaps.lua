@@ -35,20 +35,6 @@ map("i", "<C-h>", "<BS>", { desc = "Emacs: Delete backward" })
 map("i", "<C-d>", "<Del>", { desc = "Emacs: Delete forward" })
 map("i", "<C-Space>", "<Esc>v", { desc = "Emacs: Start visual selection" })
 
--- ───────────────────────────── Window navigation ─────────────────────────────
-
-map("n", "<C-h>", "<C-w>h", { desc = "Move to left window" })
-map("n", "<C-j>", "<C-w>j", { desc = "Move to window below" })
-map("n", "<C-k>", "<C-w>k", { desc = "Move to window above" })
-map("n", "<C-l>", "<C-w>l", { desc = "Move to right window" })
-
--- ───────────────────────────── Window resize ─────────────────────────────────
-
-map("n", "<S-Up>", ":resize +2<CR>", { desc = "Increase window height" })
-map("n", "<S-Down>", ":resize -2<CR>", { desc = "Decrease window height" })
-map("n", "<S-Left>", ":vertical resize +2<CR>", { desc = "Increase window width" })
-map("n", "<S-Right>", ":vertical resize -2<CR>", { desc = "Decrease window width" })
-
 -- ───────────────────────────── Indentation ───────────────────────────────────
 
 map("v", "<leader><", "<gv", { desc = "Indent left and keep selection" })

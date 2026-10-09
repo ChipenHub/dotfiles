@@ -18,6 +18,12 @@ return {
     },
     opts = {
         default_file_explorer = true,
+        keymaps = {
+            ["<C-s>"] = false,
+            ["<C-h>"] = false,
+            ["<M-v>"] = { "actions.select", opts = { vertical = true, split = "belowright" } },
+            ["<M-s>"] = { "actions.select", opts = { horizontal = true, split = "belowright" } },
+        },
         columns = {
             "permissions",
             "size",

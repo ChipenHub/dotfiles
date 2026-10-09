@@ -1,8 +1,35 @@
 # Dotfiles
 
+## Window controls: Neovim first
+
+Neovim is the primary workspace. Alt window controls belong to Neovim; tmux offers the same gestures as convenience shortcuts in other programs. `Prefix` (`Ctrl+s`, then the next key within 500ms) always operates tmux directly.
+
+| Keys | In Neovim | In a terminal without Neovim |
+| --- | --- | --- |
+| `Alt+h/j/k/l` | Focus an editor window; at its edge, continue into the neighboring tmux pane | Focus tmux pane |
+| `Alt+H/J/K/L` | Resize by one cell; use tmux when the editor window spans that entire axis | Resize tmux pane by one cell |
+| `Alt+v` | Choose an open buffer for a new right-hand split | Split tmux left/right |
+| `Alt+s` | Choose an open buffer for a new bottom split | Split tmux top/bottom, with 20% below |
+| `Alt+Space` | Equalize two windows, then cycle left/right ↔ top/bottom | Cycle tmux preset layout |
+| `Prefix Space` | Cycle tmux preset layout, bypassing editor windows | Same |
+| `Prefix v/s` | Create a tmux split outside Neovim | Same |
+| `Prefix h/j/k/l` | Focus tmux pane directly, bypassing editor windows | Same |
+
+Editor navigation, resizing, and layout cycling work in Normal, Insert, and Terminal modes. Buffer selection leaves input mode and operates on ordinary file windows. Movement stops at the outer edge rather than wrapping or creating another pane.
+
+`Alt+Space` acts only with two nonfloating windows in the current tab. Uneven windows are first equalized in their current direction; already equal windows switch between left/right and top/bottom. It preserves window order, focus, and buffers. Other window counts and input from floating windows leave the layout unchanged.
+
+`Alt+v/s` lists ordinary listed buffers, most recently used first, with paths and `[+]` for unsaved changes. Choose a number and press Enter; `q` or an empty Enter cancels without splitting. The current file is available as another view. Existing buffers and their unsaved changes are reused; existing windows are not moved. New editor splits divide the available space in half. In Oil, `Alt+v/s` opens the selected entry directly in a right/bottom split.
+
+`Space m` moves the current editor window: choose a target window by its displayed letter, then `h/j/k/l` to place the source left/below/above/right of it. With only one eligible target, selection is automatic. Only ordinary file windows in the current Neovim tab participate; floating windows, terminals, and separate Neovim processes are excluded.
+
+This uses `smart-splits.nvim` v3 and its tmux backend, plus `nvim-window-picker`. The backend's `@pane-is-vim` marker controls Alt forwarding and follows suspend/resume/exit. tmux copy mode handles its own keys instead of forwarding them. Native `Ctrl+w` commands remain available; the old custom Normal-mode `Ctrl+h/j/k/l`, Shift-arrow resizing, and Oil `Ctrl+s/Ctrl+h` split mappings are removed. Insert-mode Emacs editing is unchanged.
+
+Closing is deliberately separate: Neovim `q` closes a view/buffer as described below, while tmux `Prefix x` and `Alt+x` terminate the entire terminal pane, including Neovim if it is running there.
+
 ## tmux shortcut cheat sheet
 
-Based on `.tmux.conf`. `Prefix` = `Ctrl+s`, followed by the next key within **500ms**. `Alt+…` shortcuts need no prefix; uppercase letters mean **Shift** is held.
+Based on `.tmux.conf`. `Prefix` = `Ctrl+s`, followed by the next key within **500ms**. `Alt+…` shortcuts need no prefix; uppercase letters mean **Shift** is held. Alt navigation, resizing, splitting, and layout cycling defer to Neovim as described above; prefix commands always stay in tmux.
 
 ### Panes, windows, and sessions
 
@@ -19,8 +46,8 @@ Based on `.tmux.conf`. `Prefix` = `Ctrl+s`, followed by the next key within **50
 | Close all other panes in this window | `0` | `Alt+0` |
 | Move pane to its own window | `b` | — |
 | Move pane into another window (prompt) | `m` | — |
-| New window | `c` or `t` | `Alt+t` |
-| Respawn current pane (clear history) | - | `Alt+c` |
+| New window | `t` | `Alt+t` |
+| Respawn current pane (clear history) | `c` | `Alt+c` |
 | Previous / next window | `p` / `n` | `Alt+p` / `Alt+n` |
 | Toggle last window | `a` or `;` | `Alt+;` |
 | Window tree | `w` | `Alt+w` |
@@ -104,9 +131,8 @@ Based on `.config/nvim/lua/config/keymaps.lua` and `.config/nvim/lua/plugins/`. 
 | `Space w` | Save all files (also works in Visual mode) |
 | `q` | Close current window if multiple/floating; otherwise save modified file and close buffer or quit |
 | `-` | Open parent directory in Oil |
-| `Ctrl+h` / `Ctrl+j` / `Ctrl+k` / `Ctrl+l` | Focus window left / down / up / right |
-| `Shift+Up` / `Shift+Down` | Increase / decrease window height |
-| `Shift+Left` / `Shift+Right` | Increase / decrease window width |
+| `Space m` | Choose a target editor window, then `h/j/k/l` to move beside it |
+| `gv` | Restore the previous Visual selection in this buffer, including its selection type |
 | `[b` / `]b` | Previous / next buffer; accepts a count |
 | `[B` / `]B` | First / last listed buffer; count selects Nth from that end |
 | `gb` or `gB` | Switch to alternate buffer |
@@ -138,8 +164,6 @@ Based on `.config/nvim/lua/config/keymaps.lua` and `.config/nvim/lua/plugins/`. 
 | Visual | `J` / `K` | Move selected lines down / up and reindent |
 | Visual | `q` | Return to Normal mode |
 | Terminal | `Esc Esc` | Leave terminal input mode for Normal mode |
-
-Personal terminal/editor setup centered on tmux path jumping and a lean Neovim workflow.
 
 ## Install / refresh
 
@@ -254,9 +278,9 @@ Run their tests with `python3 -m unittest discover -s .config/tmux/tests -v`.
 
 - Prefix is `C-s` instead of `C-b`; it expires after 500ms. Press `C-s` twice within that window to toggle pane zoom.
 - Pane movement: prefix `h/j/k/l`.
-- Pane resize: `M-h/M-j/M-k/M-l`.
-- Split with cwd inherited: prefix `s` vertical, prefix `v` horizontal.
-- New window with cwd inherited: prefix `c` or `t`.
+- Pane resize: `Alt+H/J/K/L`; Alt navigation, resizing, and splitting defer to Neovim when it owns the pane.
+- Split with cwd inherited: prefix `s` top/bottom, prefix `v` left/right.
+- New window with cwd inherited: prefix `t`; prefix `c` restarts the current pane.
 - Preset layout: prefix `Space`; normalizes two/three/four-pane layouts around a wide right pane.
 - Window/session navigation: prefix `;` or prefix `a` toggles the last window, prefix `A` last session, prefix `w` window tree, prefix `f` session tree.
 
@@ -275,7 +299,7 @@ Core behavior:
 - Leader is Space.
 - Uses `lazy.nvim`.
 - Uses tags and ripgrep for navigation rather than an LSP-heavy workflow.
-- Registers `@nvim_server` in tmux so path jump can reuse live Neovim panes.
+- Registers `@nvim_server` in tmux so path jump can reuse live Neovim panes; this is separate from the smart-splits foreground marker.
 - Clipboard uses OSC52.
 - Oil is the default file explorer; open parent directory with `-`.
 - Toggle floating terminal with `C-\`.
@@ -283,7 +307,7 @@ Core behavior:
 Useful keymaps:
 
 - Insert-mode Emacs motions: `C-p/C-n/C-f/C-b/C-a/C-e`, `Alt+f/Alt+b` for forward/backward word movement, plus `C-k`, `C-j`, `C-h`, `C-d`. These mappings apply only in Insert mode.
-- Window movement: `C-h/C-j/C-k/C-l`.
+- Window controls: `Alt+h/j/k/l` focus, `Alt+H/J/K/L` resize, `Alt+v/s` choose a buffer for a split, `Alt+Space` cycle two-window layouts, `Space m` reposition a window. See the Neovim-first window controls above.
 - Save all: `<leader>w`.
 - Smart close: `q` saves when needed, then closes the window, buffer, or Neovim depending on context.
 - Macro recording moved to `gq`.
