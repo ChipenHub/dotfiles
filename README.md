@@ -19,7 +19,8 @@ Based on `.tmux.conf`. `Prefix` = `Ctrl+s`, followed by the next key within **50
 | Close all other panes in this window | `0` | `Alt+0` |
 | Move pane to its own window | `b` | — |
 | Move pane into another window (prompt) | `m` | — |
-| New window | `c` or `t` | `Alt+c` or `Alt+t` |
+| New window | `c` or `t` | `Alt+t` |
+| Respawn current pane (clear history) | - | `Alt+c` |
 | Previous / next window | `p` / `n` | `Alt+p` / `Alt+n` |
 | Toggle last window | `a` or `;` | `Alt+;` |
 | Window tree | `w` | `Alt+w` |
@@ -88,7 +89,7 @@ Based on `.config/nvim/lua/config/keymaps.lua` and `.config/nvim/lua/plugins/`. 
 | --- | --- |
 | `Ctrl+p` / `Ctrl+n` | Move up / down |
 | `Ctrl+f` / `Ctrl+b` | Move right / left one character |
-| `Alt+b` | Move backward one word without leaving Insert mode |
+| `Alt+f` / `Alt+b` | Move forward / backward one word without leaving Insert mode; these mappings do not apply in other modes |
 | `Ctrl+a` / `Ctrl+e` | Move to line start / end |
 | `Ctrl+k` | Delete through end of line |
 | `Ctrl+j` | Insert newline |
@@ -281,7 +282,7 @@ Core behavior:
 
 Useful keymaps:
 
-- Insert-mode Emacs motions: `C-p/C-n/C-f/C-b/C-a/C-e`, plus `C-k`, `C-j`, `C-h`, `C-d`.
+- Insert-mode Emacs motions: `C-p/C-n/C-f/C-b/C-a/C-e`, `Alt+f/Alt+b` for forward/backward word movement, plus `C-k`, `C-j`, `C-h`, `C-d`. These mappings apply only in Insert mode.
 - Window movement: `C-h/C-j/C-k/C-l`.
 - Save all: `<leader>w`.
 - Smart close: `q` saves when needed, then closes the window, buffer, or Neovim depending on context.
