@@ -56,8 +56,9 @@ map("v", "<leader>>", ">gv", { desc = "Indent right and keep selection" })
 
 -- ───────────────────────────── Move selection ────────────────────────────────
 
-map("v", "J", ":m '>+1<CR>gv=gv", { desc = "Move selection down" })
-map("v", "K", ":m '<-2<CR>gv=gv", { desc = "Move selection up" })
+-- Silence move reports so cmdheight=0 prompts cannot consume the following gv.
+map("v", "J", ":silent m '>+1<CR>gv=gv", { desc = "Move selection down" })
+map("v", "K", ":silent m '<-2<CR>gv=gv", { desc = "Move selection up" })
 
 -- ───────────────────────────── Search ────────────────────────────────────────
 
