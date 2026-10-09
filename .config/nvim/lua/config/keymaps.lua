@@ -27,12 +27,20 @@ local emacs_motions = {
 
 for _, motion in ipairs(emacs_motions) do
     map("i", motion.lhs, motion.rhs, { desc = "Emacs: " .. motion.desc })
+    map("c", motion.lhs, motion.rhs, { silent = false, desc = "Emacs: " .. motion.desc })
 end
 
 map("i", "<C-k>", "<C-o>D", { desc = "Emacs: Kill to line end" })
+map("c", "<C-k>", function()
+    local pos = vim.fn.getcmdpos()
+    vim.fn.setcmdline(vim.fn.getcmdline():sub(1, pos - 1), pos)
+end, { silent = false, desc = "Emacs: Kill to line end" })
 map("i", "<C-j>", "<CR>", { desc = "Emacs: Insert newline" })
+map("c", "<C-j>", "<CR>", { silent = false, desc = "Emacs: Accept command line" })
 map("i", "<C-h>", "<BS>", { desc = "Emacs: Delete backward" })
+map("c", "<C-h>", "<BS>", { silent = false, desc = "Emacs: Delete backward" })
 map("i", "<C-d>", "<Del>", { desc = "Emacs: Delete forward" })
+map("c", "<C-d>", "<Del>", { silent = false, desc = "Emacs: Delete forward" })
 map("i", "<C-Space>", "<Esc>v", { desc = "Emacs: Start visual selection" })
 
 -- ───────────────────────────── Indentation ───────────────────────────────────

@@ -307,7 +307,7 @@ Core behavior:
 
 Useful keymaps:
 
-- Insert-mode Emacs motions: `C-p/C-n/C-f/C-b/C-a/C-e`, `Alt+f/Alt+b` for forward/backward word movement, plus `C-k`, `C-j`, `C-h`, `C-d`. These mappings apply only in Insert mode.
+- Insert- and command-line-mode Emacs motions: `C-p/C-n/C-f/C-b/C-a/C-e`, `Alt+f/Alt+b` for forward/backward word movement, plus `C-k`, `C-j`, `C-h`, `C-d`. `C-Space` starts visual selection in Insert mode only.
 - Window controls: `Alt+h/j/k/l` focus, `Alt+H/J/K/L` resize, `Alt+v/s` choose a buffer for a split, `Alt+Space` cycle two-window layouts, `Space m` reposition a window. See the Neovim-first window controls above.
 - Save all: `<leader>w`.
 - Smart close: `q` saves when needed, then closes the window, buffer, or Neovim depending on context.
