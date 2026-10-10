@@ -72,9 +72,7 @@ vim.on_key(function(_, typed)
         end
 
         vim.api.nvim_buf_call(bufnr, function()
-            if vim.bo.filetype == "oil" then
-                require("oil").save({ confirm = false })
-            elseif vim.bo.buftype == "" and vim.api.nvim_buf_get_name(0) ~= "" then
+            if vim.bo.buftype == "" and vim.api.nvim_buf_get_name(0) ~= "" then
                 vim.cmd.write()
             end
         end)

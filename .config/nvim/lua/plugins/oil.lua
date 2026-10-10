@@ -16,28 +16,38 @@ return {
     keys = {
         { "-", "<cmd>Oil<CR>", desc = "Open parent directory" },
     },
+    config = function(_, opts)
+        local oil = require("oil")
+        oil.setup(opts)
+
+        -- Inspect the full action list so mixed edits still require confirmation.
+        local confirmation = require("oil.mutator.confirmation")
+        local show = confirmation.show
+        confirmation.show = function(actions, _, callback)
+            local only_creates = true
+            for _, action in ipairs(actions) do
+                if action.type ~= "create" then
+                    only_creates = false
+                    break
+                end
+            end
+            return show(actions, not only_creates, callback)
+        end
+    end,
     opts = {
         default_file_explorer = true,
-        skip_confirm_for_simple_edits = true,
         keymaps = {
             ["q"] = {
                 function()
                     local oil = require("oil")
-                    if not vim.bo.modified then
-                        oil.close({ exit_if_last_buf = true })
+                    if vim.bo.modified then
+                        vim.notify("Save Oil changes with :w before closing", vim.log.levels.WARN)
                         return
                     end
-
-                    oil.save({ confirm = false }, function(err)
-                        if err then
-                            vim.notify(err, vim.log.levels.ERROR)
-                            return
-                        end
-                        oil.close({ exit_if_last_buf = true })
-                    end)
+                    oil.close({ exit_if_last_buf = true })
                 end,
                 mode = "n",
-                desc = "Save Oil changes without confirmation and close",
+                desc = "Close Oil only when changes are saved",
             },
             ["<C-h>"] = false,
             ["<M-v>"] = { "actions.select", opts = { vertical = true, split = "belowright" } },
