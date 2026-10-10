@@ -57,6 +57,7 @@ map("v", "K", ":silent m '<-2<CR>gv=gv", { desc = "Move selection up" })
 -- ───────────────────────────── Search ────────────────────────────────────────
 
 map("n", "<Esc>", "<cmd>nohlsearch<CR>", { desc = "Clear search highlight" })
+map("x", "<Esc>", "<Esc><cmd>nohlsearch<CR>", { desc = "Exit visual mode and clear search highlight" })
 
 -- Observe the physical Esc key without replacing its mode-specific behavior.
 local save_on_escape_ns = vim.api.nvim_create_namespace("save_on_escape")

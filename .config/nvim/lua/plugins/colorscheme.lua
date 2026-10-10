@@ -19,7 +19,7 @@ return {
             groups = {
                 carbonfox = {
                     GitSignsCurrentLineBlame = { fg = "#404040" },
-                    Visual = { bg = "#383838" },
+                    Visual = { bg = "#4a4a4a" },
                 },
             },
         },
