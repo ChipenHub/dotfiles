@@ -29,6 +29,25 @@ return {
                 nowait = true,
                 desc = "Save Oil changes without confirmation",
             },
+            ["q"] = {
+                function()
+                    local oil = require("oil")
+                    if not vim.bo.modified then
+                        oil.close({ exit_if_last_buf = true })
+                        return
+                    end
+
+                    oil.save({ confirm = false }, function(err)
+                        if err then
+                            vim.notify(err, vim.log.levels.ERROR)
+                            return
+                        end
+                        oil.close({ exit_if_last_buf = true })
+                    end)
+                end,
+                mode = "n",
+                desc = "Save Oil changes without confirmation and close",
+            },
             ["<C-h>"] = false,
             ["<M-v>"] = { "actions.select", opts = { vertical = true, split = "belowright" } },
             ["<M-s>"] = { "actions.select", opts = { horizontal = true, split = "belowright" } },
