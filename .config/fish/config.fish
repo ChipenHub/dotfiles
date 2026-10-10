@@ -190,3 +190,11 @@ end
 function fish_prompt
     echo -n (prompt_pwd) "> "
 end
+
+
+# tmux: kill all sessions
+function kas
+    tmux list-sessions | while read -l line
+        tmux kill-session -t (echo $line | cut -d: -f1)
+    end
+end
