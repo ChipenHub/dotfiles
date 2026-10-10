@@ -18,8 +18,17 @@ return {
     },
     opts = {
         default_file_explorer = true,
+        skip_confirm_for_simple_edits = true,
         keymaps = {
-            ["<C-s>"] = false,
+            ["<C-w>"] = {
+                function()
+                    vim.cmd.stopinsert()
+                    require("oil").save({ confirm = false })
+                end,
+                mode = { "n", "i" },
+                nowait = true,
+                desc = "Save Oil changes without confirmation",
+            },
             ["<C-h>"] = false,
             ["<M-v>"] = { "actions.select", opts = { vertical = true, split = "belowright" } },
             ["<M-s>"] = { "actions.select", opts = { horizontal = true, split = "belowright" } },
