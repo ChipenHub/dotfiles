@@ -58,6 +58,29 @@ map("v", "K", ":silent m '<-2<CR>gv=gv", { desc = "Move selection up" })
 
 map("n", "<Esc>", "<cmd>nohlsearch<CR>", { desc = "Clear search highlight" })
 
+-- Observe the physical Esc key without replacing its mode-specific behavior.
+local save_on_escape_ns = vim.api.nvim_create_namespace("save_on_escape")
+vim.on_key(function(_, typed)
+    if typed ~= "\27" then
+        return
+    end
+
+    local bufnr = vim.api.nvim_get_current_buf()
+    vim.schedule(function()
+        if not vim.api.nvim_buf_is_valid(bufnr) or not vim.bo[bufnr].modified then
+            return
+        end
+
+        vim.api.nvim_buf_call(bufnr, function()
+            if vim.bo.filetype == "oil" then
+                require("oil").save({ confirm = false })
+            elseif vim.bo.buftype == "" and vim.api.nvim_buf_get_name(0) ~= "" then
+                vim.cmd.write()
+            end
+        end)
+    end)
+end, save_on_escape_ns)
+
 -- ───────────────────────────── Terminal ──────────────────────────────────────
 
 map("t", "<Esc><Esc>", "<C-\\><C-n>", { desc = "Exit terminal mode" })
@@ -79,8 +102,6 @@ map("n", "g[", "<cmd>pop<CR>", { desc = "Pop to previous tag stack position" })
 -- ───────────────────────────── Files ─────────────────────────────────────────
 
 map({ "n", "v" }, "<leader>w", "<cmd>wa<CR>", { desc = "Save all files" })
-map("n", "<C-w>", "<cmd>write<CR>", { nowait = true, desc = "Save current file" })
-map("i", "<C-w>", "<Esc><cmd>write<CR>", { nowait = true, desc = "Exit insert mode and save current file" })
 
 -- ───────────────────────────── Smart q ───────────────────────────────────────
 -- Press q to smart "close":

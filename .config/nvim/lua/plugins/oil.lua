@@ -20,15 +20,6 @@ return {
         default_file_explorer = true,
         skip_confirm_for_simple_edits = true,
         keymaps = {
-            ["<C-w>"] = {
-                function()
-                    vim.cmd.stopinsert()
-                    require("oil").save({ confirm = false })
-                end,
-                mode = { "n", "i" },
-                nowait = true,
-                desc = "Save Oil changes without confirmation",
-            },
             ["q"] = {
                 function()
                     local oil = require("oil")
