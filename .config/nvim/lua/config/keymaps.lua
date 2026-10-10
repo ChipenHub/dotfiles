@@ -79,6 +79,8 @@ map("n", "g[", "<cmd>pop<CR>", { desc = "Pop to previous tag stack position" })
 -- ───────────────────────────── Files ─────────────────────────────────────────
 
 map({ "n", "v" }, "<leader>w", "<cmd>wa<CR>", { desc = "Save all files" })
+map("n", "<C-w>", "<cmd>write<CR>", { desc = "Save current file" })
+map("i", "<C-w>", "<Esc><cmd>write<CR>", { desc = "Exit insert mode and save current file" })
 
 -- ───────────────────────────── Smart q ───────────────────────────────────────
 -- Press q to smart "close":
