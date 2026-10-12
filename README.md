@@ -147,7 +147,6 @@ Based on `.config/nvim/lua/config/keymaps.lua` and `.config/nvim/lua/plugins/`. 
 | Keys | Action |
 | --- | --- |
 | `gd` / `gD` | Go to definition / declaration via scope-aware tags, falling back to native motions |
-| `gr` | Find references with ripgrep and show quickfix results |
 | `g]` | List exact tag matches for symbol |
 | `g[` or `Ctrl+t` | Return to previous tag-stack position |
 | `[c` / `]c` | Previous / next Git hunk (native motions in diff mode) |
@@ -313,7 +312,7 @@ Useful keymaps:
 - Smart close: `q` saves when needed, then closes the window, buffer, or Neovim depending on context.
 - Macro recording moved to `gq`.
 - Buffer navigation: `[b`, `]b`, `[B`, `]B`, `gb` / `gB`, `<leader>bd`.
-- Tags navigation: `gd`, `gD`, `gr`, `g]`, `g[`, native `C-t`.
+- Tags navigation: `gd`, `gD`, `g]`, `g[`, native `C-t`.
 - Git: `[c` / `]c` previous/next changed hunk; `<leader>gs` Fugitive status; `<leader>gp` preview hunk; `<leader>gb` blame; `<leader>gd` diff current file.
 - Multicursor: `C-n` selects next occurrence.
 

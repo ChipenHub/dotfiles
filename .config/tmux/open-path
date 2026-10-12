@@ -57,23 +57,27 @@ def pane_directory(pane_id: str) -> Path:
 
 
 def split_location(raw: str) -> tuple[str, int | None, int | None, int | None]:
-    token = re.sub(r"\s+", "", raw)
+    token = re.sub(r"\s+", "", raw).rstrip(",;:")
 
     wrappers = {'"': '"', "'": "'", "`": "`", "(": ")", "[": "]", "{": "}", "<": ">"}
     while len(token) >= 2 and wrappers.get(token[0]) == token[-1]:
-        token = token[1:-1].strip()
-    token = token.rstrip(",;:")
+        token = token[1:-1].rstrip(",;:")
 
-    match = re.fullmatch(r"(.+)#L(\d+)", token)
-    if match:
-        return match.group(1), int(match.group(2)), None, None
-
-    match = re.fullmatch(r"(.+?):(\d+)(?:-(\d+))?(?::(\d+))?", token)
+    match = re.fullmatch(r"(.+?):(\d+)(?:-(\d+))?(?::(\d+))?(?::.*)?", token)
     if match:
         return (
             match.group(1),
             int(match.group(2)),
             int(match.group(4)) if match.group(4) else None,
+            int(match.group(3)) if match.group(3) else None,
+        )
+
+    match = re.fullmatch(r"(.+)#L(\d+)(?:-L(\d+))?", token)
+    if match:
+        return (
+            match.group(1),
+            int(match.group(2)),
+            None,
             int(match.group(3)) if match.group(3) else None,
         )
 

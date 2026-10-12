@@ -459,48 +459,6 @@ M.goto_decl = function()
     vim.cmd("normal! gD")
 end
 
--- Find references with ripgrep; tags contain definitions, not references.
-M.find_refs = function()
-    local name = vim.fn.expand("<cword>")
-    if name == "" then
-        return
-    end
-    if vim.fn.executable("rg") ~= 1 then
-        vim.notify("Finding references requires ripgrep (rg)", vim.log.levels.WARN)
-        return
-    end
-    local cmd = {
-        "rg",
-        "--vimgrep",
-        "-w",
-        "--no-heading",
-        "--color=never",
-        "-g",
-        "!tags",
-        "-g",
-        "!.git",
-        name,
-        vim.fn.getcwd(),
-    }
-    local out = vim.system(cmd, { text = true }):wait()
-    if out.code ~= 0 or not out.stdout or out.stdout == "" then
-        vim.notify(("No references found for '%s'"):format(name), vim.log.levels.INFO)
-        return
-    end
-    local qf = {}
-    for line in vim.gsplit(out.stdout, "\n", { trimempty = true }) do
-        local file, lnum, col, text = line:match("^(.-):(%d+):(%d+):(.*)$")
-        if file then
-            qf[#qf + 1] = { filename = file, lnum = tonumber(lnum), col = tonumber(col), text = text }
-        end
-    end
-    if #qf > 0 then
-        vim.fn.setqflist(qf)
-        vim.cmd("copen")
-        vim.notify(("%d reference(s)"):format(#qf), vim.log.levels.INFO)
-    end
-end
-
 M.list_tags = function()
     local name = vim.fn.expand("<cword>")
     if name == "" then
