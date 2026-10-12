@@ -198,3 +198,6 @@ function kas
         tmux kill-session -t (echo $line | cut -d: -f1)
     end
 end
+
+# tmux: short cut
+abbr -a t 'tmux'

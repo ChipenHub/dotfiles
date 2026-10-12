@@ -241,6 +241,21 @@ def run(pane: str, action: str) -> None:
     joined = tmux("capture-pane", "-p", "-M", "-J", "-S", "-", "-E", "-", "-t", pane)
     y += physical.count("\n") - height - scroll
     cells, line_starts = cells_from_capture(physical, joined, y if count == 1 and not pair else None)
+    if action == "line":
+        # Inspect the backing grid, not copy_cursor_line (which includes the
+        # copy-mode position indicator on the top screen row).
+        first = line_starts[y]
+        rows = physical.removesuffix("\n").split("\n")
+        last = y + 1
+        while last < len(rows) and line_starts[last] == first:
+            last += 1
+        commands = ["start-of-line"]
+        if "".join(rows[first:last]).strip():
+            commands.extend(["back-to-indentation", "copy-end-of-line"])
+        commands.extend(["clear-selection", "start-of-line"])
+        for command in commands:
+            tmux("send-keys", "-t", pane, "-X", command)
+        return
     if not cells:
         return
     cursor = next((i for i, cell in reversed(list(enumerate(cells))) if (cell.y, cell.x) <= (y, x)), 0)
@@ -295,7 +310,7 @@ def run(pane: str, action: str) -> None:
 
 
 if __name__ == "__main__":
-    actions = {"b", "e", "w", "iw", "aw", "ip", "extend-path"}
+    actions = {"b", "e", "w", "iw", "aw", "ip", "extend-path", "yank-line"}
     actions.update(prefix + name for prefix in ("i-", "a-") for name in PAIRS)
     actions.update("yank-" + action for action in tuple(actions) if action.startswith(("i", "a")))
     if len(sys.argv) != 3 or sys.argv[2] not in actions:

@@ -24,9 +24,90 @@ class SplitLocationTests(unittest.TestCase):
             (path, 921, None, None),
         )
 
+    def test_github_style_line_range(self):
+        self.assertEqual(
+            split_location("src/foo.kt#L11-L20"),
+            ("src/foo.kt", 11, None, 20),
+        )
+
+    def test_discards_non_numeric_content_after_line(self):
+        for suffix in ("aaa", "aaa:88", "88aaa", "88aaa:99", "aaa#L921", "-3", "1.5"):
+            with self.subTest(suffix=suffix):
+                self.assertEqual(
+                    split_location(f"src/foo.kt:99:{suffix}"),
+                    ("src/foo.kt", 99, None, None),
+                )
+
+    def test_numeric_content_after_line_is_column(self):
+        for suffix in ("88", "88:aaa", "88:99", "88:aaa#L921"):
+            with self.subTest(suffix=suffix):
+                self.assertEqual(
+                    split_location(f"src/foo.kt:99:{suffix}"),
+                    ("src/foo.kt", 99, 88, None),
+                )
+
+    def test_wrappers_with_trailing_punctuation(self):
+        for token in (
+            "[src/foo.kt:11:88],",
+            "(src/foo.kt:11:88);",
+            '"src/foo.kt:11:88":',
+            "`src/foo.kt:11:88`,;:",
+            "{src/foo.kt:11:88},",
+            "<src/foo.kt:11:88>;",
+            "['src/foo.kt:11:88',];",
+        ):
+            with self.subTest(token=token):
+                self.assertEqual(split_location(token), ("src/foo.kt", 11, 88, None))
+        self.assertEqual(
+            split_location("[src/foo.kt#L11-L20],"),
+            ("src/foo.kt", 11, None, 20),
+        )
+
+    def test_inserted_whitespace_is_still_removed(self):
+        self.assertEqual(
+            split_location(" [src/ foo.\nkt : 11 :\t88 ], \n"),
+            ("src/foo.kt", 11, 88, None),
+        )
+
     def test_existing_line_formats(self):
         self.assertEqual(split_location("foo.kt:12:3"), ("foo.kt", 12, 3, None))
         self.assertEqual(split_location("foo.kt(12,3)"), ("foo.kt", 12, 3, None))
+        self.assertEqual(split_location("foo.kt:12"), ("foo.kt", 12, None, None))
+        self.assertEqual(split_location("foo.kt:12-15"), ("foo.kt", 12, None, 15))
+        self.assertEqual(split_location("foo.kt:12-15:3"), ("foo.kt", 12, 3, 15))
+
+    def test_discards_content_after_column(self):
+        path = "xxxx/xxxx/xxxx"
+        for suffix in (
+            "xxx", "", "error: unexpected token", "99:100", "xxx:99", "xxx#L921"
+        ):
+            with self.subTest(suffix=suffix):
+                self.assertEqual(
+                    split_location(f"{path}:11:88:{suffix}"),
+                    (path, 11, 88, None),
+                )
+
+    def test_wrapped_location_with_trailing_content(self):
+        self.assertEqual(
+            split_location('"src/foo.kt:11:88: error: unexpected token"'),
+            ("src/foo.kt", 11, 88, None),
+        )
+
+    def test_parsed_location_is_used_by_nvim_command(self):
+        path = Path(__file__).resolve()
+        path_text, line, column, end_line = split_location(f"{path}:11:88:xxx")
+        self.assertEqual(
+            OPEN_PATH["nvim_command"](Path(path_text), line, column, end_line),
+            ["nvim", "+call cursor(11,88)", "--", str(path)],
+        )
+
+    def test_parsed_github_range_is_used_by_nvim_command(self):
+        path = Path(__file__).resolve()
+        path_text, line, column, end_line = split_location(f"{path}#L11-L20")
+        self.assertEqual(
+            OPEN_PATH["nvim_command"](Path(path_text), line, column, end_line),
+            ["nvim", "+11", "+normal! V20G", "--", str(path)],
+        )
 
 
 class ReusableNvimWindowTests(unittest.TestCase):

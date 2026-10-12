@@ -496,23 +496,44 @@ class TmuxTests(unittest.TestCase):
             ).strip()
             self.assertEqual(state, "1 0")
 
-    def test_double_yank_copies_line_and_returns_to_line_start(self):
-        text = "  foo bar"
-        self.load(text, column=6)
-        with self.attached_client() as client:
-            self.tmux("set-buffer", "pending")
-            self.tmux("send-keys", "-c", client, "-K", "y", "y")
-            for _ in range(100):
-                if self.tmux("show-buffer") == text + "\n":
-                    break
-                time.sleep(0.01)
-            self.assertEqual(self.tmux("show-buffer"), text + "\n")
-            self.assertEqual(self.cursor(), "0,0,0")
-            state = self.tmux(
-                "display-message", "-p", "-t", self.pane,
-                "#{pane_in_mode} #{selection_active}",
-            ).strip()
-            self.assertEqual(state, "1 0")
+    def test_double_yank_skips_indentation_and_returns_to_line_start(self):
+        for text in ("  foo bar", "\tfoo bar", "foo bar", "  你好 world", "  " + "word " * 12):
+            with self.subTest(text=text):
+                self.load(text, column=6)
+                with self.attached_client() as client:
+                    self.tmux("set-buffer", "pending")
+                    self.tmux("send-keys", "-c", client, "-K", "y", "y")
+                    expected = text.lstrip().rstrip() + "\n"
+                    for _ in range(100):
+                        if self.tmux("show-buffer") == expected:
+                            break
+                        time.sleep(0.01)
+                    self.assertEqual(self.tmux("show-buffer"), expected)
+                    self.assertEqual(self.cursor(), "0,0,0")
+                    state = self.tmux(
+                        "display-message", "-p", "-t", self.pane,
+                        "#{pane_in_mode} #{selection_active}",
+                    ).strip()
+                    self.assertEqual(state, "1 0")
+                self.tmux("kill-pane", "-t", self.pane)
+                self.pane = None
+
+    def test_double_yank_blank_line_keeps_buffer_and_moves_to_line_start(self):
+        for text in ("", "    ", "\t"):
+            with self.subTest(text=text):
+                self.load(text + "\nnext line", row=0)
+                self.send("end-of-line")
+                self.tmux("set-buffer", "pending")
+                word.run(self.pane, "yank-line")
+                self.assertEqual(self.cursor(), "0,0,0")
+                self.assertEqual(self.tmux("show-buffer"), "pending")
+                state = self.tmux(
+                    "display-message", "-p", "-t", self.pane,
+                    "#{pane_in_mode} #{selection_present}",
+                ).strip()
+                self.assertEqual(state, "1 0")
+                self.tmux("kill-pane", "-t", self.pane)
+                self.pane = None
 
     def test_real_pair_keys(self):
         text = 'xx[({<"foo \'bar `baz` qux\' end">})]yy'
