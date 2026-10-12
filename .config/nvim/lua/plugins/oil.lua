@@ -50,6 +50,7 @@ return {
                 desc = "Close Oil only when changes are saved",
             },
             ["<C-h>"] = false,
+            ["<C-s>"] = false,
             ["<M-v>"] = { "actions.select", opts = { vertical = true, split = "belowright" } },
             ["<M-s>"] = { "actions.select", opts = { horizontal = true, split = "belowright" } },
         },

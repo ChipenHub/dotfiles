@@ -115,10 +115,10 @@ def word_spans(cells: list[Cell], path: bool = False) -> list[tuple[int, int, st
 
 def word_target(cells: list[Cell], cursor: int, action: str, count: int = 1) -> tuple[int, int]:
     """Return inclusive selection bounds, or a single motion destination."""
-    spans = word_spans(cells, action in {"ip", "path-end"})
+    spans = word_spans(cells, action == "ip")
     current = next(i for i, (start, end, _) in enumerate(spans) if start <= cursor < end)
     start, end, kind = spans[current]
-    if action in {"b", "e", "w", "path-end"}:
+    if action in {"b", "e", "w"}:
         candidates = []
         for left, right, word_kind in spans:
             if word_kind in {"space", "newline"}:
@@ -126,7 +126,7 @@ def word_target(cells: list[Cell], cursor: int, action: str, count: int = 1) -> 
                 if not (action in {"b", "w"} and word_kind == "newline"
                         and (left == 0 or cells[left - 1].text == "\n")):
                     continue
-            candidates.append(right - 1 if action in {"e", "path-end"} else left)
+            candidates.append(right - 1 if action == "e" else left)
         if action == "b":
             before = bisect_left(candidates, cursor)
             target = candidates[max(0, before - count)] if before else 0
@@ -230,11 +230,11 @@ def run(pane: str, action: str) -> None:
         return subprocess.check_output(["tmux", *args], text=True)
 
     state = tmux("display-message", "-p", "-t", pane,
-                 "#{pane_in_mode} #{copy_cursor_x} #{copy_cursor_y} #{scroll_position} #{pane_height} #{selection_present} "
+                 "#{pane_in_mode} #{copy_cursor_x} #{copy_cursor_y} #{scroll_position} #{pane_height} "
                  "#{?@copy_word_count,#{@copy_word_count},1} #{rectangle_toggle}").split()
-    if len(state) != 8 or state[0] != "1":
+    if len(state) != 7 or state[0] != "1":
         return
-    _, x, y, scroll, height, selected, count, rectangle = map(int, state)
+    _, x, y, scroll, height, count, rectangle = map(int, state)
     pair = action[:2] in {"i-", "a-"} and action[2:] in PAIRS
     # -M reads copy mode's frozen backing grid, not the still-running pane.
     physical = tmux("capture-pane", "-p", "-M", "-N", "-T", "-S", "-", "-E", "-", "-t", pane)
@@ -259,8 +259,6 @@ def run(pane: str, action: str) -> None:
     if not cells:
         return
     cursor = next((i for i, cell in reversed(list(enumerate(cells))) if (cell.y, cell.x) <= (y, x)), 0)
-    if action == "extend-path":
-        action = "path-end" if selected else "ip"
     target = pair_target(cells, cursor, action) if pair else word_target(cells, cursor, action, count)
     if target is None:
         tmux("send-keys", "-t", pane, "-N", "1")
@@ -310,7 +308,7 @@ def run(pane: str, action: str) -> None:
 
 
 if __name__ == "__main__":
-    actions = {"b", "e", "w", "iw", "aw", "ip", "extend-path", "yank-line"}
+    actions = {"b", "e", "w", "iw", "aw", "ip", "yank-line"}
     actions.update(prefix + name for prefix in ("i-", "a-") for name in PAIRS)
     actions.update("yank-" + action for action in tuple(actions) if action.startswith(("i", "a")))
     if len(sys.argv) != 3 or sys.argv[2] not in actions:

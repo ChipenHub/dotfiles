@@ -635,11 +635,10 @@ class TmuxTests(unittest.TestCase):
                     time.sleep(0.01)
                 self.assertEqual(int(self.cursor().split(",")[0]), expected, keys)
 
-    def test_path_extension_and_no_global_mutation(self):
+    def test_path_selection_does_not_mutate_global_separators(self):
         self.load("你好：/a_b：/c_d", column=4)
         separators = self.tmux("show-options", "-gv", "word-separators")
-        self.assertEqual(self.selection("extend-path"), "/a_b")
-        self.assertEqual(self.selection("extend-path"), "/a_b：")
+        self.assertEqual(self.selection("ip"), "/a_b")
         self.assertEqual(self.tmux("show-options", "-gv", "word-separators"), separators)
 
 

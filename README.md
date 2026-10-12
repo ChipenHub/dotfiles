@@ -10,8 +10,8 @@ Neovim is the primary workspace. Alt window controls belong to Neovim; tmux offe
 | `Alt+H/J/K/L` | Resize by one cell; use tmux when the editor window spans that entire axis | Resize tmux pane by one cell |
 | `Alt+v` | Choose an open buffer for a new right-hand split | Split tmux left/right |
 | `Alt+s` | Choose an open buffer for a new bottom split | Split tmux top/bottom, with 20% below |
-| `Alt+Space` | Equalize two windows, then cycle left/right ↔ top/bottom | Cycle tmux preset layout |
-| `Prefix Space` | Cycle tmux preset layout, bypassing editor windows | Same |
+| `Alt+Space` | Equalize two windows, then cycle left/right ↔ top/bottom | Focus tmux pane on the right (80% width) |
+| `Prefix Space` | Focus tmux pane on the right (80% width), bypassing editor windows | Same |
 | `Prefix v/s` | Create a tmux split outside Neovim | Same |
 | `Prefix h/j/k/l` | Focus tmux pane directly, bypassing editor windows | Same |
 
@@ -29,7 +29,7 @@ Closing is deliberately separate: Neovim `q` closes a view/buffer as described b
 
 ## tmux shortcut cheat sheet
 
-Based on `.tmux.conf`. `Prefix` = `Ctrl+s`, followed by the next key within **500ms**. `Alt+…` shortcuts need no prefix; uppercase letters mean **Shift** is held. Alt navigation, resizing, splitting, and layout cycling defer to Neovim as described above; prefix commands always stay in tmux.
+Based on `.tmux.conf`. `Prefix` = `Ctrl+s`, followed by the next key within **500ms**. `Alt+…` shortcuts need no prefix; uppercase letters mean **Shift** is held. Alt navigation, resizing, splitting, and layout controls defer to Neovim as described above; prefix commands always stay in tmux.
 
 ### Panes, windows, and sessions
 
@@ -39,7 +39,10 @@ Based on `.tmux.conf`. `Prefix` = `Ctrl+s`, followed by the next key within **50
 | Resize pane left / down / up / right by one cell | — | `Alt+H` / `Alt+J` / `Alt+K` / `Alt+L` |
 | Swap pane left / down / up / right | `H` / `J` / `K` / `L` | — |
 | Toggle pane zoom | `Ctrl+s` (i.e. press `Ctrl+s` twice) | — |
-| Cycle preset layout | `Space` | `Alt+Space` |
+| Current pane on the right (80% width), others equally stacked on the left | `Space` | `Alt+Space` |
+| Move the 1st / 2nd / 3rd left pane below the main pane (20% height) | `1` / `2` / `3` | — |
+| Equalize heights in the current column / widths in the current row | `4` / `5` | — |
+| Open the selected/cursor path in a pane chosen by number | — | `Shift+Enter` |
 | Split top/bottom; new bottom pane gets 20% | `s` | `Alt+s` |
 | Split left/right | `v` | `Alt+v` |
 | Close current pane | `x` | `Alt+x` |
@@ -59,6 +62,10 @@ Based on `.tmux.conf`. `Prefix` = `Ctrl+s`, followed by the next key within **50
 | Paste tmux buffer | `P` | — |
 
 Splits and new windows inherit the current directory. Pane focus stops at window edges. Closing panes/windows above does not ask for confirmation.
+
+`Space` works with any pane count that fits the window and no longer cycles layouts. `1–3` computes the same sidebar first unless the current pane already occupies the rightmost 80% width; in that case it uses the visible left-side order from top to bottom. The preview is not displayed. The selected pane gets the bottom 20% of the right column; an existing lower-right pane returns to the sidebar. With just two panes, the resulting top/bottom pair uses the full width. A missing selection or insufficient space leaves the layout unchanged. Focus stays on the original pane.
+
+`4` affects only adjacent panes with the same left edge and width; `5` requires the same top edge and height. Other panes are unchanged. For two top panes over one full-width bottom pane, `4` does nothing anywhere; `5` equalizes only the top pair. Prefix `6–9` is unbound; `0` still closes all other panes.
 
 ### Copy mode: navigation and search
 
@@ -99,7 +106,7 @@ Scrolling up with the mouse enters copy mode in normal shell output; alternate-s
 | `D` | Copy through end of line |
 | `Ctrl+j` | Copy selection without clearing it |
 | `p` | Paste tmux buffer |
-| `Shift+Enter` | Select or extend path without opening it |
+| `Shift+Enter` | Open the same path as `Enter`, but in a pane chosen by number |
 | `Enter` | Open selected path, or path under cursor, in full-window Neovim |
 | `s` | Open `git show` for the hexadecimal commit hash under cursor in a temporary window |
 | Mouse drag / double-click / triple-click | Copy selection / word / line; clear highlight and stay in copy mode |
@@ -218,15 +225,20 @@ are not copied. OMP's temporary model picker (`Alt+P`) remains available.
 and are excluded from Git. Restart OMP after installation to load the bindings
 and shared extensions.
 
-## tmux path jump
+## Open paths in a chosen tmux pane
 
-This is the good part.
+`Shift+Enter` uses the same selection, cursor-path detection, source working directory, path search, and line/column handling as `Enter`. After resolving the path (and choosing among duplicate matches if needed), it displays pane numbers. Press a number to open the real file or directory in that pane; `Esc` cancels. It creates no window or pane and leaves the layout unchanged.
+
+An existing foreground Neovim in the chosen pane is reused. Otherwise, an interactive fish shell launches Neovim with your normal configuration, plugins, and keybindings. A busy foreground job receives `Ctrl+Z` so terminal applications can prepare their suspend/resume handlers, then resumes with `fg <PID>` when Neovim exits, including a startup failure. The destination leaves copy mode and any unfinished shell input is cancelled before launching the editor. Unsupported destinations produce an English `open-path: Cannot open in this pane: ...` message in the tmux status line.
+
+Path handling lives in `.config/tmux/open-path`; `.config/tmux/copy-mode-enter` handles opening inside the destination pane. The ordinary `Enter` behavior is unchanged.
+
+## tmux path jump
 
 Relevant files:
 
 - `.tmux.conf`
 - `.config/tmux/open-path`
-- `.config/tmux/copy-mode-enter`
 - `.config/tmux/copy-mode-git-show`
 - `.config/tmux/copy_mode_word.py`
 - `.config/nvim/lua/config/tmux.lua`
@@ -235,10 +247,9 @@ Relevant files:
 
 1. Enter tmux copy mode with `Esc`, `Enter`, or mouse wheel scroll.
 2. Move the copy cursor onto a path, or select a path with `v` / mouse drag.
-3. Press `S-Enter` to select or extend the path without opening it.
-4. Press `Enter` to open it in a full-window Neovim, reusing one in the current session when possible.
-5. Press `s` on a Git revision to run `git show` in a new window; leaving the command closes the window.
-6. Press `Esc` to cancel an active search or selection; press `q` to exit copy mode.
+3. Press `vip` to select the path without opening it, or `Enter` to open it in a full-window Neovim, reusing one in the current session when possible.
+4. Press `s` on a Git revision to run `git show` in a new window; leaving the command closes the window.
+5. Press `Esc` to cancel an active search or selection; press `q` to exit copy mode.
 
 ### Behavior
 
@@ -264,7 +275,7 @@ Relevant files:
 - `vi(` / `va)` select inside / around nested, multiline blocks. Either bracket in `()`, `[]`, `{}` or `<>` works; `b` / `B` alias parentheses / braces.
 - Text objects select forward and retain rectangle mode. `C-v` toggles rectangle selection with the cursor on the right edge; `j` / `k` keep its columns across short lines and wide Chinese characters.
 - `vip` selects a path: ASCII punctuation such as `/._:` stays inside it; whitespace, Han characters and Chinese punctuation split it. This is a custom path object, not Vim's paragraph object.
-- `Enter` without a selection selects the same path object and opens it; `S-Enter` selects or extends it without opening.
+- `Enter` without a selection selects the same path object and opens it.
 - `s` selects the current word, stopping at punctuation (including `_`, `-` and `/`), and accepts only 4–64 hexadecimal characters (a commit hash or abbreviation). It opens `git show <revision>` in a new tmux window, which closes when the command exits.
 - `y` copies an active visual selection. Without one, Vim-style yanks such as `yy`, `yiw`, `yip`, `yi(`, `ya(`, and their quote/bracket variants copy without leaving copy mode, then return the cursor to the first copied character. `p` pastes and `q` cancels copy mode.
 - `:` opens a one-line command prompt and runs the command in a temporary pane occupying the bottom 30%. Commands lasting at least three seconds close with the pane when they exit; quicker results wait for any key so they remain readable.
@@ -281,7 +292,7 @@ Run their tests with `python3 -m unittest discover -s .config/tmux/tests -v`.
 - Pane resize: `Alt+H/J/K/L`; Alt navigation, resizing, and splitting defer to Neovim when it owns the pane.
 - Split with cwd inherited: prefix `s` top/bottom, prefix `v` left/right.
 - New window with cwd inherited: prefix `t`; prefix `c` restarts the current pane.
-- Preset layout: prefix `Space`; normalizes two/three/four-pane layouts around a wide right pane.
+- Pane layouts: prefix `Space` focuses a wide right pane for any pane count; `1–3` chooses a lower-right companion; `4/5` equalizes only the current column/row.
 - Window/session navigation: prefix `;` or prefix `a` toggles the last window, prefix `A` last session, prefix `w` window tree, prefix `f` session tree.
 
 ## Neovim basics

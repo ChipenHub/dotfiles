@@ -1,13 +1,217 @@
 #!/usr/bin/env python3
 
-"""Select a path or extend an active selection using Unicode word boundaries."""
+"""Open an already-resolved path in a selected pane and restore its fish job."""
 
+import base64
+import os
+from pathlib import Path
+import runpy
+import shlex
+import signal
+import subprocess
 import sys
+import tempfile
+import time
 
-from copy_mode_word import run
+
+OPEN_PATH = runpy.run_path(Path(__file__).with_name("open-path"))
+
+
+class CannotOpen(Exception):
+    pass
+
+
+def tmux(socket, *args):
+    return subprocess.check_output(["tmux", "-S", socket, *args], text=True, stderr=subprocess.PIPE).strip()
+
+
+def message(socket, client, reason):
+    subprocess.run(
+        ["tmux", "-S", socket, "display-message", "-c", client, "-d", "3000",
+         f"open-path: Cannot open in this pane: {reason}"],
+        capture_output=True,
+    )
+
+
+def processes(tty):
+    output = subprocess.check_output(
+        ["ps", "-t", tty, "-o", "pid=,ppid=,pgid=,tpgid=,stat=,comm="],
+        text=True, stderr=subprocess.PIPE
+    )
+    result = {}
+    for line in output.splitlines():
+        pid, parent, group, foreground, state, command = line.split(None, 5)
+        result[int(pid)] = (int(parent), int(group), int(foreground), state, command)
+    return result
+
+
+def foreground(tty, shell_pid):
+    process = processes(tty).get(shell_pid)
+    if process is None:
+        raise CannotOpen("the original shell has exited.")
+    return process[2]
+
+
+def send_command(socket, pane, command):
+    # Cancel unfinished input only after fish owns the terminal.
+    tmux(socket, "send-keys", "-t", pane, "C-c")
+    tmux(socket, "send-keys", "-t", pane, "-l", command)
+    tmux(socket, "send-keys", "-t", pane, "Enter")
+
+
+def run_editor(marker, socket, client, *program):
+    marker = Path(marker)
+    marker.with_suffix(".started").touch()
+    pane = os.environ["TMUX_PANE"]
+    original_server = ""
+    try:
+        original_server = tmux(socket, "show-options", "-pqv", "-t", pane, "@nvim_server")
+        result = subprocess.run(program)
+        if result.returncode:
+            message(socket, client, "Neovim exited with an error.")
+        return result.returncode
+    except (OSError, subprocess.CalledProcessError):
+        message(socket, client, "Neovim could not be started.")
+        return 1
+    finally:
+        # Restore the suspended editor's registration before fish resumes it.
+        if original_server:
+            subprocess.run(
+                ["tmux", "-S", socket, "set-option", "-p", "-t", pane, "@nvim_server", original_server],
+                capture_output=True,
+            )
+        marker.with_suffix(".finished").touch()
+
+
+def open_in_pane(pane, socket, client, path, line, column, end_line):
+    state = tmux(socket, "display-message", "-p", "-t", pane,
+                 "#{pane_pid}\t#{pane_tty}\t#{pane_in_mode}\t#{@nvim_server}").split("\t")
+    shell_pid, tty, in_mode = int(state[0]), state[1], state[2] == "1"
+    table = processes(tty)
+    if len(state) == 4 and state[3]:
+        # pane_current_command may name the Python launcher, not its Neovim
+        # child. Reuse only an editor belonging to the foreground process group.
+        try:
+            probe = subprocess.run(
+                ["nvim", "--server", state[3], "--remote-expr", "getpid()"],
+                capture_output=True, text=True, timeout=1,
+            )
+        except subprocess.TimeoutExpired:
+            probe = None
+        if probe is not None and probe.returncode == 0 and probe.stdout.strip().isdigit():
+            editor_pid = int(probe.stdout.strip())
+            editor = table.get(editor_pid)
+            if editor is None:
+                # Neovim's server may be detached from the tty; its parent is
+                # the TUI process which must still own this pane's foreground.
+                parent = subprocess.check_output(
+                    ["ps", "-p", str(editor_pid), "-o", "ppid="], text=True, stderr=subprocess.PIPE,
+                ).strip()
+                editor = table.get(int(parent)) if parent.isdigit() else None
+            if editor and editor[1] == editor[2] and "T" not in editor[3]:
+                if OPEN_PATH["open_in_nvim"](pane, state[3], path, line, column, end_line):
+                    if in_mode:
+                        tmux(socket, "send-keys", "-t", pane, "-X", "cancel")
+                    return
+
+    shell = table.get(shell_pid)
+    # fish accepts an exact PID, so fg cannot resume a different stopped job.
+    if shell is None or Path(shell[4]).name.lstrip("-") != "fish":
+        raise CannotOpen("an interactive fish shell is required.")
+    argv = subprocess.check_output(
+        ["ps", "-p", str(shell_pid), "-o", "args="], text=True, stderr=subprocess.PIPE
+    ).strip().split()
+    if any(arg not in ("-i", "--interactive", "-l", "--login", "--no-config") for arg in argv[1:]):
+        raise CannotOpen("this fish process is not an interactive shell.")
+    group = shell[2]
+    if shell[1] != shell_pid or group <= 0:
+        raise CannotOpen("shell job control is unavailable.")
+    resume_pid = None
+    if group != shell_pid:
+        resume_pid = next((pid for pid, p in table.items() if p[0] == shell_pid and p[1] == group), None)
+        if resume_pid is None:
+            raise CannotOpen("the foreground task cannot be safely resumed.")
+
+    busy = tmux(socket, "if-shell", "-F", "-t", pane, "#{@open_path_in_pane}",
+                "display-message -p busy", f"set-option -p -t {pane} @open_path_in_pane {os.getpid()}")
+    if busy:
+        raise CannotOpen("an editor is already being opened.")
+    stop_requested = False
+    launched = False
+    try:
+        with tempfile.TemporaryDirectory(prefix="tmux-open-path-") as directory:
+            marker = Path(directory) / "editor"
+            if in_mode:
+                tmux(socket, "send-keys", "-t", pane, "-X", "cancel")
+            if resume_pid is not None:
+                # Raw-mode TUIs handle Ctrl+Z themselves, preparing terminal
+                # cleanup and a SIGCONT redraw. A direct SIGTSTP bypasses that.
+                tmux(socket, "send-keys", "-t", pane, "C-z")
+                stop_requested = True
+                deadline = time.monotonic() + 2
+                while foreground(tty, shell_pid) != shell_pid:
+                    if time.monotonic() >= deadline:
+                        raise CannotOpen("the foreground task did not suspend.")
+                    time.sleep(0.05)
+            if foreground(tty, shell_pid) != shell_pid:
+                raise CannotOpen("the shell is not ready.")
+            program = OPEN_PATH["nvim_command"](path, line, column, end_line)
+            command = shlex.join([sys.executable, str(Path(__file__).resolve()),
+                                  "--run", str(marker), socket, client, *program])
+            if resume_pid is not None:
+                command += f"; builtin fg {resume_pid}"
+            send_command(socket, pane, command)
+            deadline = time.monotonic() + 3
+            while not marker.with_suffix(".started").exists():
+                if time.monotonic() >= deadline:
+                    raise CannotOpen("the shell did not start Neovim.")
+                time.sleep(0.05)
+            launched = True
+            if not marker.with_suffix(".finished").exists():
+                OPEN_PATH["set_pane_name"](pane, path.name)
+                tmux(socket, "select-pane", "-t", pane)
+            # fish runs fg after Neovim, even if startup fails.
+            while not marker.with_suffix(".finished").exists():
+                time.sleep(0.2)
+                current = tmux(socket, "display-message", "-p", "-t", pane, "#{pane_pid}")
+                if current != str(shell_pid):
+                    break
+    finally:
+        recovery_error = None
+        if stop_requested and not launched:
+            try:
+                stopped = any(p[1] == group and "T" in p[3] for p in processes(tty).values())
+                if stopped:
+                    current = foreground(tty, shell_pid)
+                    if current == shell_pid:
+                        send_command(socket, pane, f"builtin fg {resume_pid}")
+                    elif current == group:
+                        os.killpg(group, signal.SIGCONT)
+                    else:
+                        recovery_error = f"the task is suspended; run 'fg {resume_pid}' to resume it."
+            except (OSError, subprocess.CalledProcessError, CannotOpen):
+                recovery_error = f"run 'fg {resume_pid}' in the original shell to resume its task."
+        subprocess.run(["tmux", "-S", socket, "set-option", "-pqu", "-t", pane, "@open_path_in_pane"], capture_output=True)
+        if recovery_error:
+            raise CannotOpen(recovery_error)
+
+
+def main():
+    if len(sys.argv) >= 6 and sys.argv[1] == "--run":
+        return run_editor(*sys.argv[2:])
+    if len(sys.argv) != 8:
+        raise SystemExit("usage: copy-mode-enter PANE_ID SOCKET CLIENT PATH_BASE64 LINE COLUMN END_LINE")
+    pane, socket, client, path, line, column, end_line = sys.argv[1:]
+    os.environ["TMUX"] = f"{socket},0,0"
+    try:
+        open_in_pane(pane, socket, client, Path(os.fsdecode(base64.b64decode(path))),
+                     int(line) or None, int(column) or None, int(end_line) or None)
+    except CannotOpen as error:
+        message(socket, client, str(error))
+    except (OSError, subprocess.CalledProcessError):
+        message(socket, client, "the pane is unavailable or the command failed.")
+    return 0
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        raise SystemExit(2)
-    run(sys.argv[1], "extend-path")
+    raise SystemExit(main())

@@ -4,13 +4,17 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
+import tempfile
 from collections.abc import Callable
+from contextlib import nullcontext
 from pathlib import Path
 
 
@@ -385,7 +389,27 @@ def open_target(
     line: int | None,
     column: int | None,
     end_line: int | None,
+    in_pane: bool = False,
 ) -> None:
+    if in_pane:
+        socket, client = subprocess.check_output(
+            ["tmux", "display-message", "-p", "#{socket_path}\t#{client_name}"],
+            text=True,
+        ).strip().split("\t")
+        # Keep filename characters out of tmux's %% and #{...} expansion.
+        encoded_path = base64.b64encode(os.fsencode(path)).decode("ascii")
+        command = shlex.join([
+            str(Path(__file__).with_name("copy-mode-enter").resolve()),
+            "%%", socket, client, encoded_path, str(line or 0), str(column or 0), str(end_line or 0),
+        ])
+        result = subprocess.run(
+            ["tmux", "display-panes", "-b", "-d", "0", "run-shell -b " + shlex.quote(command)],
+            capture_output=True, text=True, check=False,
+        )
+        if result.returncode:
+            tmux_message(result.stderr.strip() or "could not show the pane picker")
+        return
+
     reusable_nvim = find_reusable_nvim(pane_id)
     if reusable_nvim is not None:
         nvim_pane, server = reusable_nvim
@@ -430,51 +454,50 @@ def choose_target(
     line: int | None,
     column: int | None,
     end_line: int | None,
+    in_pane: bool = False,
 ) -> None:
-    chooser = [
-        str(Path(__file__).resolve()),
-        "--choose",
-        pane_id,
-        str(cwd),
-        str(line or 0),
-        str(column or 0),
-        str(end_line or 0),
-        *[str(path) for path in matches],
-    ]
-    result = subprocess.run(
-        [
-            "tmux",
-            "display-popup",
-            "-E",
-            "-t",
+    # The path popup must close before displaying the pane-number overlay.
+    with tempfile.TemporaryDirectory(prefix="tmux-path-choice-") if in_pane else nullcontext() as directory:
+        choice_file = Path(directory) / "choice" if directory else None
+        chooser = [
+            str(Path(__file__).resolve()),
+            "--choose-pane" if in_pane else "--choose",
+            *([str(choice_file)] if choice_file else []),
             pane_id,
-            "-d",
             str(cwd),
-            "-w",
-            "80%",
-            "-h",
-            "80%",
-            *chooser,
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        tmux_message(result.stderr.strip() or "could not open the path chooser")
+            str(line or 0),
+            str(column or 0),
+            str(end_line or 0),
+            *[str(path) for path in matches],
+        ]
+        result = subprocess.run(
+            [
+                "tmux", "display-popup", "-E", "-t", pane_id, "-d", str(cwd),
+                "-w", "80%", "-h", "80%", *chooser,
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            tmux_message(result.stderr.strip() or "could not open the path chooser")
+        elif choice_file and choice_file.exists():
+            open_target(pane_id, Path(choice_file.read_text()), line, column, end_line, in_pane=True)
 
 
 def run_chooser() -> int:
-    if len(sys.argv) < 8:
+    args = sys.argv[2:]
+    choice_file = Path(args.pop(0)) if sys.argv[1] == "--choose-pane" and args else None
+    if len(args) < 6:
         tmux_message("path chooser received no candidates")
         return 2
 
-    pane_id = sys.argv[2]
-    cwd = Path(sys.argv[3])
-    line = int(sys.argv[4]) or None
-    column = int(sys.argv[5]) or None
-    end_line = int(sys.argv[6]) or None
-    matches = [Path(value) for value in sys.argv[7:]]
+    pane_id = args[0]
+    cwd = Path(args[1])
+    line = int(args[2]) or None
+    column = int(args[3]) or None
+    end_line = int(args[4]) or None
+    matches = [Path(value) for value in args[5:]]
 
     result = subprocess.run(
         [
@@ -494,15 +517,19 @@ def run_chooser() -> int:
     path = Path(result.stdout.strip())
     if not path.is_absolute():
         path = (cwd / path).resolve()
-    open_target(pane_id, path, line, column, end_line)
+    if choice_file:
+        choice_file.write_text(str(path))
+    else:
+        open_target(pane_id, path, line, column, end_line)
     return 0
 
 
 def main() -> int:
-    if len(sys.argv) >= 2 and sys.argv[1] == "--choose":
+    if len(sys.argv) >= 2 and sys.argv[1] in {"--choose", "--choose-pane"}:
         return run_chooser()
 
-    if len(sys.argv) != 2:
+    in_pane = len(sys.argv) == 3 and sys.argv[1] == "--pane"
+    if not in_pane and len(sys.argv) != 2:
         tmux_message("missing source pane")
         return 2
 
@@ -512,7 +539,7 @@ def main() -> int:
         tmux_message("no path selected")
         return 1
 
-    pane_id = sys.argv[1]
+    pane_id = sys.argv[2] if in_pane else sys.argv[1]
     cwd = pane_directory(pane_id)
     try:
         path, matches = resolve_path(path_text, cwd, pane_id)
@@ -521,13 +548,13 @@ def main() -> int:
         return 0
     if path is None:
         if matches:
-            choose_target(pane_id, cwd, matches, line, column, end_line)
+            choose_target(pane_id, cwd, matches, line, column, end_line, in_pane=in_pane)
             return 0
         else:
             tmux_message(f"cannot find {path_text!r} from {cwd}")
         return 1
 
-    open_target(pane_id, path, line, column, end_line)
+    open_target(pane_id, path, line, column, end_line, in_pane=in_pane)
     return 0
 
 

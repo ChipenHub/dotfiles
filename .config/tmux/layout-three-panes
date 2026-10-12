@@ -1,42 +1,172 @@
-#!/bin/sh
+#!/usr/bin/env python3
+"""Focus a right-hand main pane or equalize a local row/column."""
 
-set -eu
+import re
+import subprocess
+import sys
+from dataclasses import dataclass, replace
 
-pane_id=$1
-pane_count=$2
 
-place_active_pane_on_right() {
-    tmux select-layout -t "$pane_id" main-vertical-mirrored
-    right_pane=$(tmux list-panes -t "$pane_id" -f '#{pane_at_right}' -F '#{pane_id}')
-    if [ "$pane_id" != "$right_pane" ]; then
-        tmux swap-pane -d -s "$pane_id" -t "$right_pane"
-    fi
-    tmux select-pane -t "$pane_id"
-}
+@dataclass(frozen=True)
+class Pane:
+    id: str
+    x: int
+    y: int
+    width: int
+    height: int
 
-case "$pane_count" in
-    2)
-        pane_left=$(tmux display-message -p -t "$pane_id" '#{pane_left}')
-        pane_width=$(tmux display-message -p -t "$pane_id" '#{pane_width}')
-        window_width=$(tmux display-message -p -t "$pane_id" '#{window_width}')
-        main_pane_width=$(tmux show-options -Avw -t "$pane_id" main-pane-width)
-        main_pane_percent=${main_pane_width%\%}
-        width_delta=$((pane_width * 100 - window_width * main_pane_percent))
-        if [ "$width_delta" -lt 0 ]; then
-            width_delta=$((-width_delta))
-        fi
 
-        # Percentage rounding and the split border can shift the main pane by two cells.
-        if [ "$pane_left" -gt 0 ] && [ "$width_delta" -le 200 ]; then
-            tmux select-layout -t "$pane_id" even-vertical
-        else
-            place_active_pane_on_right
-        fi
-        ;;
-    3|4)
-        place_active_pane_on_right
-        ;;
-    *)
-        tmux next-layout -t "$pane_id"
-        ;;
-esac
+def parse_panes(layout):
+    return {
+        f"%{pid}": Pane(f"%{pid}", int(x), int(y), int(w), int(h))
+        for w, h, x, y, pid in re.findall(
+            r"(\d+)x(\d+),(\d+),(\d+),(\d+)(?=[,}\]]|$)", layout
+        )
+    }
+
+
+def equalize(panes, active, vertical):
+    position, size = ("y", "height") if vertical else ("x", "width")
+    cross_position, cross_size = ("x", "width") if vertical else ("y", "height")
+    peers = sorted(
+        (p for p in panes if getattr(p, cross_position) == getattr(active, cross_position)
+         and getattr(p, cross_size) == getattr(active, cross_size)),
+        key=lambda p: getattr(p, position),
+    )
+    # Do not resize across an intervening pane with a different span.
+    group = []
+    for pane in peers:
+        if group and getattr(group[-1], position) + getattr(group[-1], size) + 1 != getattr(pane, position):
+            if active in group:
+                break
+            group = []
+        group.append(pane)
+    if active not in group or len(group) < 2:
+        return panes
+    start = getattr(group[0], position)
+    end = getattr(group[-1], position) + getattr(group[-1], size)
+    base, extra = divmod(end - start - len(group) + 1, len(group))
+    replacements = {}
+    for index, pane in enumerate(group):
+        length = base + (index < extra)
+        replacements[pane.id] = replace(pane, **{position: start, size: length})
+        start += length + 1
+    return [replacements.get(p.id, p) for p in panes]
+
+
+def main_layout(panes, active, width, height, action):
+    if len(panes) == 1:
+        return panes
+    on_right = active.x > 0 and active.x + active.width == width and abs(active.width * 100 - width * 80) <= 200
+    left = sorted((p for p in panes if p.x + p.width <= active.x), key=lambda p: (p.y, p.x))
+    if action != "space" and on_right:
+        # Keep the visible left-side numbering; an old lower-right pane returns
+        # to the sidebar when a different pane takes its place.
+        candidates = left
+        others = left + [p for p in panes if p != active and p not in left]
+    else:
+        # Preview main-vertical-mirrored + swapping the active pane into its
+        # main slot, without exposing that intermediate layout to applications.
+        order = list(panes)
+        index = order.index(active)
+        order[0], order[index] = order[index], order[0]
+        others = order[1:]
+        if on_right and active.y == 0 and active.height == height and len(left) == len(others):
+            others = left
+        candidates = others
+    bottom = None
+    if action != "space":
+        index = int(action) - 1
+        if index >= len(candidates):
+            return panes
+        bottom = candidates[index]
+        others = [p for p in others if p != bottom]
+
+    right_width = active.width if on_right and action != "space" else width * 80 // 100
+    left_width = width - right_width - 1 if others else 0
+    right_x = left_width + 1 if others else 0
+    if not others:
+        right_width = width
+    bottom_height = max(1, height * 20 // 100) if bottom else 0
+    main_height = height - bottom_height - 1 if bottom else height
+    if right_width < 1 or main_height < 1 or (others and (left_width < 1 or height < len(others) * 2 - 1)):
+        return panes
+
+    result = [Pane(active.id, right_x, 0, right_width, main_height)]
+    if bottom:
+        result.append(Pane(bottom.id, right_x, main_height + 1, right_width, bottom_height))
+    if others:
+        base, extra = divmod(height - len(others) + 1, len(others))
+        y = 0
+        for index, pane in enumerate(others):
+            pane_height = base + (index < extra)
+            result.append(Pane(pane.id, 0, y, left_width, pane_height))
+            y += pane_height + 1
+    return result
+
+
+def layout_tree(panes):
+    """Build tmux's split tree from rectangles, returning leaf traversal order."""
+    x, y = min(p.x for p in panes), min(p.y for p in panes)
+    width = max(p.x + p.width for p in panes) - x
+    height = max(p.y + p.height for p in panes) - y
+    cell = f"{width}x{height},{x},{y}"
+    if len(panes) == 1:
+        return f"{cell},{panes[0].id[1:]}", [panes[0].id]
+    for position, size, brackets in (("x", "width", "{}"), ("y", "height", "[]")):
+        for cut in sorted({getattr(p, position) + getattr(p, size) for p in panes}):
+            before = [p for p in panes if getattr(p, position) + getattr(p, size) <= cut]
+            after = [p for p in panes if getattr(p, position) > cut]
+            if not before or not after or len(before) + len(after) != len(panes):
+                continue
+            first, first_ids = layout_tree(before)
+            second, second_ids = layout_tree(after)
+            return f"{cell}{brackets[0]}{first},{second}{brackets[1]}", first_ids + second_ids
+    raise ValueError("pane rectangles cannot form a tmux layout")
+
+
+def checksum(layout):
+    value = 0
+    for char in layout:
+        value = ((value >> 1) | ((value & 1) << 15)) + ord(char)
+        value &= 0xffff
+    return f"{value:04x},{layout}"
+
+
+def run(pane_id, action, socket=None):
+    command = ["tmux", "-S", socket] if socket else ["tmux"]
+
+    def tmux(*args):
+        return subprocess.check_output(command + list(args), text=True).strip()
+
+    layout = tmux("display-message", "-p", "-t", pane_id, "#{window_layout}")
+    by_id = parse_panes(layout)
+    # Pane index order is not necessarily the same as geometric order.
+    order = tmux("list-panes", "-t", pane_id, "-F", "#{pane_id}").splitlines()
+    panes = [by_id[pid] for pid in order]
+    active = by_id[pane_id]
+    width, height = map(int, re.match(r"[0-9a-f]+,(\d+)x(\d+)", layout).groups())
+    if action in ("4", "5"):
+        result = equalize(panes, active, vertical=action == "4")
+    else:
+        result = main_layout(panes, active, width, height, action)
+    if {p.id: p for p in result} == by_id:
+        return
+    tree, desired = layout_tree(result)
+    args = ["select-layout", "-t", pane_id, checksum(tree)]
+    # select-layout ignores saved pane IDs and assigns panes in index order.
+    # Restore identities in the same command queue, keeping focus on the caller.
+    for index, wanted in enumerate(desired):
+        if order[index] == wanted:
+            continue
+        other = order.index(wanted)
+        args += [";", "swap-pane", "-d", "-s", order[index], "-t", wanted]
+        order[index], order[other] = order[other], order[index]
+    args += [";", "select-pane", "-t", pane_id]
+    tmux(*args)
+
+
+if __name__ == "__main__":
+    if len(sys.argv) not in (3, 4) or sys.argv[2] not in ("space", "1", "2", "3", "4", "5"):
+        raise SystemExit("usage: layout-three-panes PANE_ID {space|1|2|3|4|5} [SOCKET]")
+    run(*sys.argv[1:])
