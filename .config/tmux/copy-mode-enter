@@ -12,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import uuid
 
 
 OPEN_PATH = runpy.run_path(Path(__file__).with_name("open-path"))
@@ -59,12 +60,37 @@ def send_command(socket, pane, command):
     tmux(socket, "send-keys", "-t", pane, "Enter")
 
 
-def run_editor(marker, socket, client, *program):
-    marker = Path(marker)
-    marker.with_suffix(".started").touch()
+def replace_owner(socket, pane, expected, owner):
+    # Compare and replace inside tmux so concurrent requests cannot steal a lock.
+    return not tmux(
+        socket, "if-shell", "-F", "-t", pane,
+        f"#{{==:#{{@open_path_in_pane}},{expected}}}",
+        f"set-option -p -t {pane} @open_path_in_pane {owner}",
+        "display-message -p busy",
+    )
+
+
+def release_owner(socket, pane, owner):
+    subprocess.run(
+        ["tmux", "-S", socket, "if-shell", "-F", "-t", pane,
+         f"#{{==:#{{@open_path_in_pane}},{owner}}}",
+         f"set-option -pqu -t {pane} @open_path_in_pane"],
+        capture_output=True,
+    )
+
+
+def run_editor(marker, socket, client, previous_owner, *program):
     pane = os.environ["TMUX_PANE"]
+    owner = f"{os.getpid()}:{previous_owner.split(':', 1)[1]}"
+    if not replace_owner(socket, pane, previous_owner, owner):
+        message(socket, client, "the opening request has expired.")
+        return 1
     original_server = ""
     try:
+        # The launcher owns cleanup now; the controller need not stay alive.
+        marker = Path(marker)
+        marker.with_suffix(".started").write_text(owner)
+        marker.with_suffix(".started").replace(marker)
         original_server = tmux(socket, "show-options", "-pqv", "-t", pane, "@nvim_server")
         result = subprocess.run(program)
         if result.returncode:
@@ -80,7 +106,7 @@ def run_editor(marker, socket, client, *program):
                 ["tmux", "-S", socket, "set-option", "-p", "-t", pane, "@nvim_server", original_server],
                 capture_output=True,
             )
-        marker.with_suffix(".finished").touch()
+        release_owner(socket, pane, owner)
 
 
 def open_in_pane(pane, socket, client, path, line, column, end_line):
@@ -132,9 +158,18 @@ def open_in_pane(pane, socket, client, path, line, column, end_line):
         if resume_pid is None:
             raise CannotOpen("the foreground task cannot be safely resumed.")
 
-    busy = tmux(socket, "if-shell", "-F", "-t", pane, "#{@open_path_in_pane}",
-                "display-message -p busy", f"set-option -p -t {pane} @open_path_in_pane {os.getpid()}")
-    if busy:
+    previous_owner = tmux(socket, "show-options", "-pqv", "-t", pane, "@open_path_in_pane")
+    if previous_owner:
+        try:
+            os.kill(int(previous_owner.split(":", 1)[0]), 0)
+        except ProcessLookupError:
+            pass
+        except (ValueError, PermissionError):
+            raise CannotOpen("the pane's editor lock cannot be verified.")
+        else:
+            raise CannotOpen("an editor is already being opened.")
+    owner = f"{os.getpid()}:{uuid.uuid4().hex}"
+    if not replace_owner(socket, pane, previous_owner, owner):
         raise CannotOpen("an editor is already being opened.")
     stop_requested = False
     launched = False
@@ -157,25 +192,21 @@ def open_in_pane(pane, socket, client, path, line, column, end_line):
                 raise CannotOpen("the shell is not ready.")
             program = OPEN_PATH["nvim_command"](path, line, column, end_line)
             command = shlex.join([sys.executable, str(Path(__file__).resolve()),
-                                  "--run", str(marker), socket, client, *program])
+                                  "--run", str(marker), socket, client, owner, *program])
             if resume_pid is not None:
                 command += f"; builtin fg {resume_pid}"
             send_command(socket, pane, command)
             deadline = time.monotonic() + 3
-            while not marker.with_suffix(".started").exists():
+            while not marker.exists():
                 if time.monotonic() >= deadline:
                     raise CannotOpen("the shell did not start Neovim.")
                 time.sleep(0.05)
             launched = True
-            if not marker.with_suffix(".finished").exists():
+            current_owner = tmux(socket, "show-options", "-pqv", "-t", pane, "@open_path_in_pane")
+            if current_owner == marker.read_text():
                 OPEN_PATH["set_pane_name"](pane, path.name)
                 tmux(socket, "select-pane", "-t", pane)
-            # fish runs fg after Neovim, even if startup fails.
-            while not marker.with_suffix(".finished").exists():
-                time.sleep(0.2)
-                current = tmux(socket, "display-message", "-p", "-t", pane, "#{pane_pid}")
-                if current != str(shell_pid):
-                    break
+            # The launcher releases its lock on exit; fish then resumes the job.
     finally:
         recovery_error = None
         if stop_requested and not launched:
@@ -191,13 +222,13 @@ def open_in_pane(pane, socket, client, path, line, column, end_line):
                         recovery_error = f"the task is suspended; run 'fg {resume_pid}' to resume it."
             except (OSError, subprocess.CalledProcessError, CannotOpen):
                 recovery_error = f"run 'fg {resume_pid}' in the original shell to resume its task."
-        subprocess.run(["tmux", "-S", socket, "set-option", "-pqu", "-t", pane, "@open_path_in_pane"], capture_output=True)
+        release_owner(socket, pane, owner)
         if recovery_error:
             raise CannotOpen(recovery_error)
 
 
 def main():
-    if len(sys.argv) >= 6 and sys.argv[1] == "--run":
+    if len(sys.argv) >= 7 and sys.argv[1] == "--run":
         return run_editor(*sys.argv[2:])
     if len(sys.argv) != 8:
         raise SystemExit("usage: copy-mode-enter PANE_ID SOCKET CLIENT PATH_BASE64 LINE COLUMN END_LINE")

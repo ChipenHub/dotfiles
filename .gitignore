@@ -33,4 +33,5 @@ __pycache__/
 
 # test scripts
 .config/nvim/tests/
-.config/tmux/tests/
+.config/tmux/tests/*
+!.config/tmux/tests/test_copy_mode_enter.py

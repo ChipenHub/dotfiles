@@ -1,6 +1,8 @@
 """Tests for tmux's open-path helper."""
 
+import base64
 import runpy
+import shlex
 from pathlib import Path
 import unittest
 from unittest.mock import Mock, patch
@@ -243,6 +245,54 @@ class ReusableNvimWindowTests(unittest.TestCase):
         commands = [call.args[0] for call in run.call_args_list]
         self.assertIn(["tmux", "select-window", "-t", "%1"], commands)
         self.assertIn(["tmux", "select-pane", "-t", "%1"], commands)
+
+
+class PaneTargetTests(unittest.TestCase):
+    def test_picker_passes_selected_pane_and_encoded_path_to_launcher(self):
+        path = Path("/tmp/中文 ' %% #{pane_id}.txt")
+        run = Mock(return_value=Mock(returncode=0))
+        finder = Mock()
+        with (
+            patch.object(OPEN_PATH["subprocess"], "check_output", return_value="/socket\tclient\n"),
+            patch.object(OPEN_PATH["subprocess"], "run", run),
+            patch.dict(open_target.__globals__, {"find_reusable_nvim": finder}),
+        ):
+            open_target("%9", path, 12, 3, 15, in_pane=True)
+
+        finder.assert_not_called()
+        command = run.call_args.args[0]
+        self.assertEqual(command[:-1], ["tmux", "display-panes", "-b", "-d", "0"])
+        callback = shlex.split(command[-1])
+        self.assertEqual(callback[:2], ["run-shell", "-b"])
+        launcher = shlex.split(callback[2])
+        self.assertEqual(Path(launcher[0]).name, "copy-mode-enter")
+        self.assertEqual(launcher[1:4], ["%%", "/socket", "client"])
+        self.assertEqual(base64.b64decode(launcher[4]).decode(), str(path))
+        self.assertEqual(launcher[5:], ["12", "3", "15"])
+
+    def test_path_popup_closes_before_pane_picker_and_cancel_does_not_open(self):
+        chooser = OPEN_PATH["choose_target"]
+        for choose in (False, True):
+            with self.subTest(choose=choose):
+                opener = Mock()
+
+                def popup(command, **_kwargs):
+                    opener.assert_not_called()
+                    index = command.index("--choose-pane")
+                    if choose:
+                        Path(command[index + 1]).write_text("/tmp/chosen.txt")
+                    return Mock(returncode=0)
+
+                with (
+                    patch.object(OPEN_PATH["subprocess"], "run", side_effect=popup),
+                    patch.dict(chooser.__globals__, {"open_target": opener}),
+                ):
+                    chooser("%9", Path("/tmp"), [Path("/tmp/chosen.txt")], 12, 3, 15, in_pane=True)
+
+                if choose:
+                    opener.assert_called_once_with("%9", Path("/tmp/chosen.txt"), 12, 3, 15, in_pane=True)
+                else:
+                    opener.assert_not_called()
 
 
 if __name__ == "__main__":
