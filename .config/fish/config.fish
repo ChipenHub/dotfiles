@@ -46,6 +46,10 @@ abbr -a ii 'cd /Volumes/disk1/CapCut/iOS/CapCut/'
 abbr -a i2 'cd /Volumes/disk1/CapCut/iOS2/CapCut/'
 abbr -a aa 'cd /Volumes/disk1/CapCut/Android/'
 
+abbr -a mb 'make build'
+abbr -a mi 'make install'
+abbr -a mr 'make run'
+
 # uv
 abbr -a ur 'uv run' 
 abbr -a up 'uv pip'
