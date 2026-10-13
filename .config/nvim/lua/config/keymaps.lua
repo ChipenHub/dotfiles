@@ -15,8 +15,6 @@ end
 
 -- Keep these mappings out of Normal and Visual modes.
 local emacs_motions = {
-    { lhs = "<C-p>", rhs = "<Up>", desc = "Move up" },
-    { lhs = "<C-n>", rhs = "<Down>", desc = "Move down" },
     { lhs = "<C-f>", rhs = "<Right>", desc = "Move forward" },
     { lhs = "<C-b>", rhs = "<Left>", desc = "Move backward" },
     { lhs = "<M-f>", rhs = "<C-Right>", desc = "Move forward one word" },
@@ -171,16 +169,41 @@ map("n", "gq", "q", { noremap = true, silent = true, desc = "Record macro (origi
 
 -- ───────────────────────────── Buffer navigation ─────────────────────────────
 
-map("n", "[b", function()
+local function previous_buffer()
     for _ = 1, vim.v.count1 do
         vim.cmd.bprevious()
     end
-end, { desc = "Previous buffer" })
-map("n", "]b", function()
+end
+
+local function next_buffer()
     for _ = 1, vim.v.count1 do
         vim.cmd.bnext()
     end
-end, { desc = "Next buffer" })
+end
+
+map("n", "[b", previous_buffer, { desc = "Previous buffer" })
+map("n", "]b", next_buffer, { desc = "Next buffer" })
+for _, motion in ipairs({ { "p", "previous", previous_buffer }, { "n", "next", next_buffer } }) do
+    local key, direction, switch_buffer = unpack(motion)
+    map({ "n", "i", "t" }, "<M-" .. key .. ">", function()
+        if vim.env.TMUX and vim.env.TMUX_PANE and #vim.fn.getbufinfo({ buflisted = 1 }) == 1 then
+            -- Execute the tmux action instead of sending the key back into Neovim.
+            local output = vim.fn.system({
+                "tmux",
+                "run-shell",
+                "-C",
+                "-t",
+                vim.env.TMUX_PANE,
+                direction .. '-window -t "#{session_id}"',
+            })
+            if vim.v.shell_error ~= 0 then
+                vim.notify(vim.trim(output), vim.log.levels.ERROR)
+            end
+        else
+            switch_buffer()
+        end
+    end, { desc = "Switch to " .. direction .. " buffer or tmux window" })
+end
 map("n", "[B", function()
     local bufs = vim.tbl_filter(function(b)
         return vim.bo[b].buflisted

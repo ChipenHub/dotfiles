@@ -1,4 +1,6 @@
 -- Basic editor options
+vim.opt.autocomplete = true
+vim.opt.autocompletedelay = 150
 vim.opt.backup = false
 vim.opt.clipboard = "unnamedplus"
 vim.opt.cmdheight = 0

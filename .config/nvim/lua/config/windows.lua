@@ -44,13 +44,26 @@ end
 
 function M.cycle_layout()
     local layout = vim.fn.winlayout()
-    if
-        vim.api.nvim_win_get_config(0).relative ~= ""
-        or layout[1] == "leaf"
-        or #layout[2] ~= 2
-        or layout[2][1][1] ~= "leaf"
-        or layout[2][2][1] ~= "leaf"
-    then
+    if vim.api.nvim_win_get_config(0).relative ~= "" then
+        return
+    end
+    if layout[1] == "leaf" then
+        if vim.env.TMUX and vim.env.TMUX_PANE then
+            -- Run the tmux action directly; forwarding Alt-Space would loop back here.
+            local output = vim.fn.system({
+                "tmux",
+                "run-shell",
+                "-t",
+                vim.env.TMUX_PANE,
+                '~/.config/tmux/layout-three-panes "#{pane_id}" space "#{socket_path}"',
+            })
+            if vim.v.shell_error ~= 0 then
+                vim.notify(vim.trim(output), vim.log.levels.ERROR)
+            end
+        end
+        return
+    end
+    if #layout[2] ~= 2 or layout[2][1][1] ~= "leaf" or layout[2][2][1] ~= "leaf" then
         return
     end
 

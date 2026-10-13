@@ -45,7 +45,7 @@ return {
             end, { desc = "Choose buffer for " .. direction .. " split" })
         end
         vim.keymap.set({ "n", "i", "t" }, "<M-Space>", windows.cycle_layout, {
-            desc = "Equalize two windows, then cycle left/right and top/bottom layouts",
+            desc = "Cycle Neovim layout, or tmux layout with one window",
         })
         vim.keymap.set("n", "<leader>m", windows.move_window, { desc = "Move window beside a chosen window" })
         splits.setup(opts)
