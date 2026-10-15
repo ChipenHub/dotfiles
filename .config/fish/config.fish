@@ -81,8 +81,8 @@ abbr -a rmf 'rm -rf'
 # cp
 abbr -a cp 'cp -r'
 
-# cp
-abbr -a r 'rg'
+# rg
+abbr -a r 'rg --vimgrep'
 
 # git
 abbr -a g 'git'

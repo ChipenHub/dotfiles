@@ -113,16 +113,16 @@ class SplitLocationTests(unittest.TestCase):
 
 
 class ReusableNvimWindowTests(unittest.TestCase):
-    def test_finds_only_live_whole_window_nvim_in_session(self):
+    def test_finds_only_live_nvim_in_session(self):
         def run(command, **_kwargs):
             if command[:3] == ["tmux", "list-panes", "-s"]:
                 return Mock(
                     returncode=0,
                     stdout=(
-                        "%1\t@1\t1\t/live.nvim\n"
-                        "%2\t@2\t2\t/split.nvim\n"
-                        "%3\t@3\t1\t/dead.nvim\n"
-                        "%9\t@4\t2\t\n"
+                        "%1\t@1\t/live.nvim\n"
+                        "%2\t@2\t/split.nvim\n"
+                        "%3\t@3\t/dead.nvim\n"
+                        "%9\t@4\t\n"
                     ),
                 )
             server = command[2]
@@ -140,8 +140,8 @@ class ReusableNvimWindowTests(unittest.TestCase):
                 return Mock(
                     returncode=0,
                     stdout=(
-                        "%1\t@1\t1\t/fullscreen.nvim\n"
-                        "%9\t@2\t2\t/current.nvim\n"
+                        "%1\t@1\t/fullscreen.nvim\n"
+                        "%9\t@2\t/current.nvim\n"
                     ),
                 )
             return Mock(returncode=0)
@@ -158,9 +158,9 @@ class ReusableNvimWindowTests(unittest.TestCase):
                 return Mock(
                     returncode=0,
                     stdout=(
-                        "%1\t@1\t1\t/fullscreen.nvim\n"
-                        "%8\t@2\t2\t/window.nvim\n"
-                        "%9\t@2\t2\t\n"
+                        "%1\t@1\t/fullscreen.nvim\n"
+                        "%8\t@2\t/window.nvim\n"
+                        "%9\t@2\t\n"
                     ),
                 )
             return Mock(returncode=0)
@@ -170,6 +170,58 @@ class ReusableNvimWindowTests(unittest.TestCase):
                 find_reusable_nvim("%9"),
                 ("%8", "/window.nvim"),
             )
+
+    def test_reuses_split_nvim_in_another_window_without_creating_a_window(self):
+        def run(command, **_kwargs):
+            if command[:3] == ["tmux", "list-panes", "-s"]:
+                return Mock(
+                    returncode=0,
+                    stdout="%1\t@1\t/split.nvim\n%2\t@1\t\n%9\t@2\t\n",
+                )
+            return Mock(returncode=0)
+
+        opener = Mock(return_value=True)
+        with (
+            patch.object(OPEN_PATH["subprocess"], "run", side_effect=run) as runner,
+            patch.dict(open_target.__globals__, {"open_in_nvim": opener}),
+        ):
+            open_target("%9", Path("/tmp/file.txt"), 12, 3, None)
+
+        opener.assert_called_once_with(
+            "%1", "/split.nvim", Path("/tmp/file.txt"), 12, 3, None
+        )
+        self.assertFalse(any(
+            call.args[0][:2] == ["tmux", "new-window"]
+            for call in runner.call_args_list
+        ))
+
+    def test_reuses_first_nvim_when_multiple_instances_are_available(self):
+        for source_window in ("@1", "@3"):
+            with self.subTest(source_window=source_window):
+                def run(command, **_kwargs):
+                    if command[:3] == ["tmux", "list-panes", "-s"]:
+                        return Mock(
+                            returncode=0,
+                            stdout=(
+                                "%1\t@1\t/first.nvim\n"
+                                "%2\t@1\t/second.nvim\n"
+                                "%3\t@2\t/third.nvim\n"
+                                f"%9\t{source_window}\t\n"
+                            ),
+                        )
+                    return Mock(returncode=0)
+
+                with patch.object(OPEN_PATH["subprocess"], "run", side_effect=run):
+                    self.assertEqual(find_reusable_nvim("%9"), ("%1", "/first.nvim"))
+
+    def test_returns_none_when_no_live_nvim_exists(self):
+        def run(command, **_kwargs):
+            if command[:3] == ["tmux", "list-panes", "-s"]:
+                return Mock(returncode=0, stdout="%1\t@1\t/dead.nvim\n%9\t@1\t\n")
+            return Mock(returncode=1)
+
+        with patch.object(OPEN_PATH["subprocess"], "run", side_effect=run):
+            self.assertIsNone(find_reusable_nvim("%9"))
 
     def test_enter_reuses_whole_window_nvim(self):
         finder = Mock(return_value=("%1", "/live.nvim"))

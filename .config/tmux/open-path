@@ -280,7 +280,7 @@ def find_reusable_nvim(pane_id: str) -> tuple[str, str] | None:
             "-t",
             pane_id,
             "-F",
-            "#{pane_id}\t#{window_id}\t#{window_panes}\t#{@nvim_server}",
+            "#{pane_id}\t#{window_id}\t#{@nvim_server}",
         ],
         capture_output=True,
         text=True,
@@ -290,9 +290,9 @@ def find_reusable_nvim(pane_id: str) -> tuple[str, str] | None:
         return None
 
     source_window = ""
-    candidates: list[tuple[str, str, str, str]] = []
+    candidates: list[tuple[str, str, str]] = []
     for entry in result.stdout.splitlines():
-        candidate_pane, window_id, window_panes, server = entry.split("\t", 3)
+        candidate_pane, window_id, server = entry.split("\t", 2)
         if candidate_pane == pane_id:
             source_window = window_id
         if not server:
@@ -304,20 +304,19 @@ def find_reusable_nvim(pane_id: str) -> tuple[str, str] | None:
             check=False,
         )
         if probe.returncode == 0:
-            candidates.append((candidate_pane, window_id, window_panes, server))
+            candidates.append((candidate_pane, window_id, server))
 
-    for candidate_pane, _, _, server in candidates:
+    for candidate_pane, _, server in candidates:
         if candidate_pane == pane_id:
             return candidate_pane, server
 
     same_window = [candidate for candidate in candidates if candidate[1] == source_window]
-    if len(same_window) == 1:
-        candidate_pane, _, _, server = same_window[0]
+    if same_window:
+        candidate_pane, _, server = same_window[0]
         return candidate_pane, server
 
-    whole_window = [candidate for candidate in candidates if candidate[2] == "1"]
-    if len(whole_window) == 1:
-        candidate_pane, _, _, server = whole_window[0]
+    if candidates:
+        candidate_pane, _, server = candidates[0]
         return candidate_pane, server
     return None
 
