@@ -413,11 +413,10 @@ def open_target(
     if reusable_nvim is not None:
         nvim_pane, server = reusable_nvim
         if open_in_nvim(nvim_pane, server, path, line, column, end_line):
-            if nvim_pane == pane_id:
-                subprocess.run(
-                    ["tmux", "send-keys", "-t", pane_id, "-X", "cancel"],
-                    check=False,
-                )
+            subprocess.run(
+                ["tmux", "send-keys", "-t", nvim_pane, "-X", "cancel"],
+                check=False,
+            )
             return
 
     program = nvim_command(path, line, column, end_line)

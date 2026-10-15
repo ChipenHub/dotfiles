@@ -227,15 +227,22 @@ class ReusableNvimWindowTests(unittest.TestCase):
         finder = Mock(return_value=("%1", "/live.nvim"))
         opener = Mock(return_value=True)
         globals_ = open_target.__globals__
-        with patch.dict(
-            globals_,
-            {
-                "find_reusable_nvim": finder,
-                "open_in_nvim": opener,
-            },
+        with (
+            patch.dict(
+                globals_,
+                {
+                    "find_reusable_nvim": finder,
+                    "open_in_nvim": opener,
+                },
+            ),
+            patch.object(OPEN_PATH["subprocess"], "run") as run,
         ):
             open_target("%9", Path("/tmp/file.txt"), None, None, None)
 
+        run.assert_called_once_with(
+            ["tmux", "send-keys", "-t", "%1", "-X", "cancel"],
+            check=False,
+        )
         finder.assert_called_once_with("%9")
         opener.assert_called_once_with(
             "%1", "/live.nvim", Path("/tmp/file.txt"), None, None, None
@@ -262,6 +269,24 @@ class ReusableNvimWindowTests(unittest.TestCase):
             ["tmux", "send-keys", "-t", "%9", "-X", "cancel"],
             check=False,
         )
+
+    def test_failed_reuse_does_not_cancel_copy_mode(self):
+        run = Mock(return_value=Mock(returncode=1, stderr="failed"))
+        with (
+            patch.dict(
+                open_target.__globals__,
+                {
+                    "find_reusable_nvim": Mock(return_value=("%1", "/live.nvim")),
+                    "open_in_nvim": Mock(return_value=False),
+                    "tmux_message": Mock(),
+                },
+            ),
+            patch.object(OPEN_PATH["subprocess"], "run", run),
+        ):
+            open_target("%9", Path("/tmp/file.txt"), None, None, None)
+
+        self.assertEqual(run.call_count, 1)
+        self.assertEqual(run.call_args.args[0][:2], ["tmux", "new-window"])
 
     def test_reuse_switches_to_a_listed_buffer_or_edits_a_new_one(self):
         run = Mock(return_value=Mock(returncode=0))
