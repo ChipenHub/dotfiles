@@ -32,6 +32,12 @@ class SplitLocationTests(unittest.TestCase):
             ("src/foo.kt", 11, None, 20),
         )
 
+    def test_unicode_line_ranges(self):
+        for token in ("src/foo.kt:88–99", "src/foo.kt#L88–L99"):
+            with self.subTest(token=token):
+                self.assertEqual(split_location(token), ("src/foo.kt", 88, None, 99))
+        self.assertEqual(split_location("src/foo.kt:88–99:3"), ("src/foo.kt", 88, 3, 99))
+
     def test_discards_non_numeric_content_after_line(self):
         for suffix in ("aaa", "aaa:88", "88aaa", "88aaa:99", "aaa#L921", "-3", "1.5"):
             with self.subTest(suffix=suffix):

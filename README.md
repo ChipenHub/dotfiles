@@ -153,7 +153,7 @@ Based on `.config/nvim/lua/config/keymaps.lua` and `.config/nvim/lua/plugins/`. 
 
 | Keys | Action |
 | --- | --- |
-| `gd` / `gD` | Go to definition / declaration via scope-aware tags, falling back to native motions |
+| `gd` / `gD` | Go to definition / declaration via tags, falling back to native motions |
 | `g]` | List exact tag matches for symbol |
 | `g[` or `Ctrl+t` | Return to previous tag-stack position |
 | `[c` / `]c` | Previous / next Git hunk (native motions in diff mode) |

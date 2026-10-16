@@ -67,7 +67,7 @@ def split_location(raw: str) -> tuple[str, int | None, int | None, int | None]:
     while len(token) >= 2 and wrappers.get(token[0]) == token[-1]:
         token = token[1:-1].rstrip(",;:")
 
-    match = re.fullmatch(r"(.+?):(\d+)(?:-(\d+))?(?::(\d+))?(?::.*)?", token)
+    match = re.fullmatch(r"(.+?):(\d+)(?:[-–](\d+))?(?::(\d+))?(?::.*)?", token)
     if match:
         return (
             match.group(1),
@@ -76,7 +76,7 @@ def split_location(raw: str) -> tuple[str, int | None, int | None, int | None]:
             int(match.group(3)) if match.group(3) else None,
         )
 
-    match = re.fullmatch(r"(.+)#L(\d+)(?:-L(\d+))?", token)
+    match = re.fullmatch(r"(.+)#L(\d+)(?:[-–]L(\d+))?", token)
     if match:
         return (
             match.group(1),

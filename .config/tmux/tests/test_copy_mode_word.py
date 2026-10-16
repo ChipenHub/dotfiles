@@ -61,6 +61,15 @@ class WordTests(unittest.TestCase):
         self.assertEqual(self.select("a\tb", 2, "ip"), "b")
         self.assertEqual(self.select("a\u3000b", 2, "ip"), "b")
 
+    def test_path_line_ranges(self):
+        for location in ("xxx:88-99", "xxx:88–99", "src/foo.py#L88-L99", "src/foo.py#L88–L99"):
+            text = f"位置：{location}，后文"
+            for position in range(3, 3 + len(location)):
+                with self.subTest(location=location, position=position):
+                    self.assertEqual(self.select(text, position, "ip"), location)
+        self.assertEqual(self.select("xxx:88–后文", 1, "ip"), "xxx:88")
+        self.assertEqual(self.select("xxx:88–99", 5, "iw"), "88")
+
     def test_motion_destinations(self):
         text = "你好：123_456，abc"
         cells, _ = word.cells_from_capture(text + "\n", text + "\n")
@@ -349,6 +358,15 @@ class TmuxTests(unittest.TestCase):
     def test_path_selection(self):
         self.load("路径：/tmp/a_b.py:12，后文", column=7)
         self.assertEqual(self.selection("ip"), "/tmp/a_b.py:12")
+
+    def test_real_keys_select_unicode_line_range(self):
+        text = "src/foo.py:88–99"
+        self.load(text, column=3)
+        with self.attached_client() as client:
+            end = len(text) - 1
+            self.assert_key_selection(client, ["v", "i", "p"], f"{end},0,0,0,{end},0,0,1")
+            self.send("copy-selection-no-clear")
+            self.assertEqual(self.tmux("show-buffer"), text)
 
     def test_backward_motion_on_tab_prefixed_path(self):
         text = "\t.config/tmux/copy_mode_word.py"

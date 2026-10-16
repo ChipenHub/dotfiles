@@ -105,6 +105,12 @@ def word_spans(cells: list[Cell], path: bool = False) -> list[tuple[int, int, st
     spans = []
     for index, cell in enumerate(cells):
         kind = character_kind(cell.text[0], path)
+        if path and cell.text == "–" and index > 0 and cells[index - 1].text.isdigit():
+            following = index + 1
+            if following < len(cells) and cells[following].text == "L":
+                following += 1
+            if following < len(cells) and cells[following].text.isdigit():
+                kind = "word"
         if spans and kind == spans[-1][2] and kind not in {"single", "newline"}:
             start, _, _ = spans[-1]
             spans[-1] = (start, index + 1, kind)
