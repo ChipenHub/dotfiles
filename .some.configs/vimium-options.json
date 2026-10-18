@@ -1,0 +1,5 @@
+{
+  "exclusionRules": [],
+  "keyMappings": "unmapAll\nmap j scrollDown\nmap k scrollUp\nmap f LinkHints.activateMode\nmap F LinkHints.activateModeToOpenInNewTab\nmap o Vomnibar.activate\nmap i focusInput",
+  "settingsVersion": "2.4.2"
+}
