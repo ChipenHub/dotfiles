@@ -61,7 +61,7 @@ Based on `.tmux.conf`. `Prefix` = `Ctrl+s`, followed by the next key within **50
 | Enter copy mode | `Esc` or `Enter` | `Alt+[` |
 | Paste tmux buffer | `P` | — |
 
-Splits and new windows inherit the current directory. Pane focus stops at window edges. Closing panes/windows above does not ask for confirmation.
+Splits and new windows start in the current Neovim file's directory when Neovim is in the foreground. Unnamed or special buffers, and shells outside Neovim, use the pane's working directory instead. This does not change Neovim's working directory or its `Alt+v/s` editor splits. Pane focus stops at window edges. Closing panes/windows above does not ask for confirmation.
 
 `Space` works with any pane count that fits the window and no longer cycles layouts. `1–3` computes the same sidebar first unless the current pane already occupies the rightmost 80% width; in that case it uses the visible left-side order from top to bottom. The preview is not displayed. The selected pane gets the bottom 20% of the right column; an existing lower-right pane returns to the sidebar. With just two panes, the resulting top/bottom pair uses the full width. A missing selection or insufficient space leaves the layout unchanged. Focus stays on the original pane.
 
