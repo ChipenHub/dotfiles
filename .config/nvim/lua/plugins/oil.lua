@@ -20,18 +20,18 @@ return {
         local oil = require("oil")
         oil.setup(opts)
 
-        -- Inspect the full action list so mixed edits still require confirmation.
+        -- Require confirmation if any action is not a create or copy.
         local confirmation = require("oil.mutator.confirmation")
         local show = confirmation.show
         confirmation.show = function(actions, _, callback)
-            local only_creates = true
+            local only_additions = true
             for _, action in ipairs(actions) do
-                if action.type ~= "create" then
-                    only_creates = false
+                if action.type ~= "create" and action.type ~= "copy" then
+                    only_additions = false
                     break
                 end
             end
-            return show(actions, not only_creates, callback)
+            return show(actions, not only_additions, callback)
         end
     end,
     opts = {
