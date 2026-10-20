@@ -4,7 +4,9 @@ scriptencoding utf-8
 let mapleader = ' '
 let maplocalleader = ' '
 
+set background=dark
 syntax enable
+highlight CursorLine term=NONE cterm=NONE ctermbg=235 gui=NONE guibg=#262626
 filetype plugin indent on
 set encoding=utf-8
 set number relativenumber cursorline
