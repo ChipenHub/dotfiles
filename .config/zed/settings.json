@@ -1,0 +1,80 @@
+// Zed settings
+//
+// For information on how to configure Zed, see the Zed
+// documentation: https://zed.dev/docs/configuring-zed
+//
+// To see all of Zed's default settings without changing your
+// custom settings, run `zed: open default settings` from the
+// command palette (cmd-shift-p / ctrl-shift-p)
+{
+  "cli_default_open_behavior": "existing_window",
+  "terminal": {
+    "option_as_meta": true
+  },
+  "diagnostics": {
+    "button": false
+  },
+  "proxy": "127.0.0.1:7897",
+  "disable_ai": true,
+  "project_panel": {
+    "dock": "left"
+  },
+  "outline_panel": {
+    "dock": "left"
+  },
+  "git_panel": {
+    "button": false,
+    "dock": "left"
+  },
+  "collaboration_panel": {
+    "dock": "left",
+    "button": false
+  },
+  "agent": {
+    "default_model": {
+      "provider": "openai-subscribed",
+      "model": "gpt-6.1-sol",
+      "enable_thinking": true,
+      "effort": "high"
+    },
+    "dock": "right",
+    "sidebar_side": "left",
+    "button": false,
+    "favorite_models": [],
+    "model_parameters": []
+  },
+  "diff_view_style": "split",
+  "icon_theme": {
+    "mode": "dark",
+    "light": "Zed (Default)",
+    "dark": "Zed (Default)"
+  },
+  "telemetry": {
+    "diagnostics": false,
+    "metrics": false,
+    "anthropic_retention": false
+  },
+  "session": {
+    "trust_all_worktrees": true
+  },
+  "vim_mode": true,
+  "base_keymap": "VSCode",
+  "tab_bar": {
+    "show": false
+  },
+  "mouse_wheel_zoom": true,
+  "minimap": {
+    "show": "never"
+  },
+  "buffer_font_fallbacks": [
+    "Fira Code"
+  ],
+  "buffer_font_family": "JetBrainsMono Nerd Font Mono",
+  "ui_font_size": 16,
+  "buffer_font_size": 15,
+  "theme": {
+    "mode": "dark",
+    "light": "Gruvbox Light",
+    "dark": "Ayu Dark",
+  },
+}
