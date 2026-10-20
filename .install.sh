@@ -32,6 +32,7 @@ config_links=(
   nvim
   ov
   tmux
+  zed
 )
 
 install_git_include() {
