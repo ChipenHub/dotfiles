@@ -172,6 +172,15 @@ Based on `.config/nvim/lua/config/keymaps.lua` and `.config/nvim/lua/plugins/`. 
 | Visual | `q` | Return to Normal mode |
 | Terminal | `Esc Esc` | Leave terminal input mode for Normal mode |
 
+## Vim
+
+`.vimrc` provides a plugin-free subset of the Neovim shortcuts above. Install it with `./.install.sh vimrc`, then run `vim`.
+
+- Shared keys: Insert/command-line Emacs editing, `Space w`, smart `q`, macro recording on `gq`, buffer navigation, tags navigation, and Visual indentation/line movement.
+- `Esc` saves modified named files in Normal, Insert, and Visual modes and clears search highlighting.
+- Normal-mode `Alt+h/j/k/l` and `Alt+H/J/K/L` focus/resize Vim splits; `Alt+v/s` split the current buffer directly. `Alt+p/n` switch buffers, without tmux fallback. Alt keys require terminal support.
+- `-` opens netrw instead of Oil. Neovim-only plugins, floating terminal, window picker/layout cycling, multicursor, and Git shortcuts are not included.
+
 ## Install / refresh
 
 Run from the repo root:

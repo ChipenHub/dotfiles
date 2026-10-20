@@ -6,40 +6,15 @@ local function file_window(win)
         and vim.bo[vim.api.nvim_win_get_buf(win)].buftype == ""
 end
 
-function M.split_buffer(direction)
+function M.split_oil(direction)
     local source = vim.api.nvim_get_current_win()
-    local current = vim.api.nvim_get_current_buf()
-    if not file_window(source) then
-        vim.notify("Choose a file window before splitting", vim.log.levels.INFO)
+    if vim.api.nvim_win_get_config(source).relative ~= "" then
         return
     end
 
-    local buffers = vim.tbl_filter(function(buf)
-        return vim.bo[buf.bufnr].buftype == ""
-    end, vim.fn.getbufinfo({ buflisted = 1 }))
-    table.sort(buffers, function(a, b)
-        if a.lastused == b.lastused then
-            return a.bufnr < b.bufnr
-        end
-        return a.lastused > b.lastused
-    end)
-
-    vim.ui.select(buffers, {
-        prompt = "Open buffer in " .. direction .. " split:",
-        format_item = function(buf)
-            local name = buf.name == "" and "[No Name]" or vim.fn.fnamemodify(buf.name, ":~:.")
-            local modified = vim.bo[buf.bufnr].modified and " [+]" or ""
-            local same_file = buf.bufnr == current and " (current file: another view)" or ""
-            return name .. modified .. same_file
-        end,
-    }, function(buf)
-        -- The picker may be asynchronous; never create a split on cancellation
-        -- or substitute another window if its original target has disappeared.
-        if not buf or not file_window(source) or not vim.api.nvim_buf_is_valid(buf.bufnr) then
-            return
-        end
-        vim.api.nvim_open_win(buf.bufnr, true, { win = source, split = direction })
-    end)
+    vim.api.nvim_open_win(vim.api.nvim_get_current_buf(), true, { win = source, split = direction })
+    local oil = require("oil")
+    oil.open(oil.get_current_dir())
 end
 
 function M.cycle_layout()

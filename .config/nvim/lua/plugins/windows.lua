@@ -40,9 +40,9 @@ return {
             vim.keymap.set({ "n", "i", "t" }, "<M-" .. key .. ">", function()
                 vim.cmd.stopinsert()
                 vim.schedule(function()
-                    windows.split_buffer(direction)
+                    windows.split_oil(direction)
                 end)
-            end, { desc = "Choose buffer for " .. direction .. " split" })
+            end, { desc = "Open Oil in " .. direction .. " split" })
         end
         vim.keymap.set({ "n", "i", "t" }, "<M-Space>", windows.cycle_layout, {
             desc = "Cycle Neovim layout, or tmux layout with one window",

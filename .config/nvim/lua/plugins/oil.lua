@@ -51,8 +51,8 @@ return {
             },
             ["<C-h>"] = false,
             ["<C-s>"] = false,
-            ["<M-v>"] = { "actions.select", opts = { vertical = true, split = "belowright" } },
-            ["<M-s>"] = { "actions.select", opts = { horizontal = true, split = "belowright" } },
+            ["<M-v>"] = false,
+            ["<M-s>"] = false,
         },
         columns = {
             "permissions",
