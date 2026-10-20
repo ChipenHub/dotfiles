@@ -17,6 +17,8 @@ end
 local emacs_motions = {
     { lhs = "<C-f>", rhs = "<Right>", desc = "Move forward" },
     { lhs = "<C-b>", rhs = "<Left>", desc = "Move backward" },
+    { lhs = "<C-p>", rhs = "<Up>", desc = "Move up" },
+    { lhs = "<C-n>", rhs = "<Down>", desc = "Move down" },
     { lhs = "<M-f>", rhs = "<C-Right>", desc = "Move forward one word" },
     { lhs = "<M-b>", rhs = "<C-Left>", desc = "Move backward one word" },
     { lhs = "<C-a>", rhs = "<Home>", desc = "Move to line start" },
