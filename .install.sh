@@ -12,6 +12,7 @@ home_links=(
   .omp
   .hammerspoon
   .tmux.conf
+  .vimrc
   .emacs
   .emacs.custom.el
 )
