@@ -37,9 +37,6 @@ end
 # command replacements
 abbr -a cd 'z'
 abbr -a find 'fd'
-abbr -a du 'dust'
-abbr -a df 'duf'
-abbr -a ovx 'ov --exec --'
 
 # project
 abbr -a ii 'cd /Volumes/disk1/CapCut/iOS/CapCut/'
