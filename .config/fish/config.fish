@@ -98,7 +98,7 @@ abbr -a gc 'git commit -m'
 abbr -a ga 'git commit -am'
 abbr --add --position anywhere -- --force --force-with-lease
 
-function commit --description 'Commit staged changes with a Luna-generated message'
+function commit --description 'Commit staged changes with a DeepSeek-generated message'
     set -l repo_check (git rev-parse --is-inside-work-tree 2>&1)
     if test $status -ne 0
         printf '%s\n' $repo_check >&2
@@ -117,12 +117,12 @@ function commit --description 'Commit staged changes with a Luna-generated messa
 
     set -l message (begin
         printf '%s\n' \
-            'Generate a Git commit message for the staged diff below. Output exactly one line and nothing else. Use the format <type>: <lowercase English description>, with the narrowest conventional commit type. Do not use Markdown, quotes, a scope, or a trailing period.' \
+            'Write a Git commit message for the staged diff below. First line: <type>: <lowercase English description>, using the narrowest conventional commit type. Optionally add a blank line then a short body explaining what changed and why. Output plain text only: no Markdown, no quotes, no scope, no trailing period.' \
             '<staged_diff>'
         git diff --cached --
         printf '%s\n' '</staged_diff>'
     end | pi \
-        --model openai-codex/gpt-5.6-luna \
+        --model deepseek/deepseek-flash \
         --thinking off \
         --no-session \
         --no-tools \
@@ -137,18 +137,20 @@ function commit --description 'Commit staged changes with a Luna-generated messa
         return $pi_status
     end
 
-    if test (count $message) -ne 1
-        echo 'Luna returned an invalid multiline commit message; no commit created.' >&2
+    # Keep the multi-line message as one value, not a list of lines.
+    set -l message (string trim -- $message | string join \n | string collect)
+    if test -z "$message"
+        echo 'DeepSeek returned an empty commit message; no commit created.' >&2
         return 1
     end
 
-    set message (string trim -- "$message")
-    if not string match -rq '^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test): [a-z0-9]' -- "$message"
-        printf 'Luna returned an invalid commit message: %s\n' "$message" >&2
+    set -l subject (string split -m1 \n -- $message)[1]
+    if not string match -rq '^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test): [a-z0-9]' -- "$subject"
+        printf 'DeepSeek returned an invalid commit message: %s\n' "$subject" >&2
         return 1
     end
 
-    printf 'Commit message: %s\n' "$message"
+    printf 'Commit message:\n%s\n' "$message"
     git commit -m "$message"
 end
 
