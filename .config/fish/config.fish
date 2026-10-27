@@ -72,6 +72,9 @@ bind \r __execute_with_nvim_default
 # clear
 abbr -a c 'clear'
 
+# Chinese manpage
+abbr -a cman 'man -M /usr/local/share/man/zh_CN'
+
 # remove
 abbr -a rmf 'rm -rf'
 
