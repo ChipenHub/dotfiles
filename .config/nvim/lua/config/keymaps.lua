@@ -73,11 +73,8 @@ vim.on_key(function(_, typed)
         end
 
         vim.api.nvim_buf_call(bufnr, function()
-            -- Oil handles confirmation through its BufWriteCmd handler.
-            if
-                (vim.bo.buftype == "" or (vim.bo.buftype == "acwrite" and vim.bo.filetype == "oil"))
-                and vim.api.nvim_buf_get_name(0) ~= ""
-            then
+            -- Never save Oil buffers on Escape; only :w triggers saving there.
+            if vim.bo.buftype == "" and vim.api.nvim_buf_get_name(0) ~= "" then
                 vim.cmd.write()
             end
         end)
