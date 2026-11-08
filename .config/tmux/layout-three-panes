@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Focus a right-hand main pane or equalize a local row/column."""
 
-import re
 import subprocess
 import sys
 from dataclasses import dataclass, replace
@@ -14,15 +13,6 @@ class Pane:
     y: int
     width: int
     height: int
-
-
-def parse_panes(layout):
-    return {
-        f"%{pid}": Pane(f"%{pid}", int(x), int(y), int(w), int(h))
-        for w, h, x, y, pid in re.findall(
-            r"(\d+)x(\d+),(\d+),(\d+),(\d+)(?=[,}\]]|$)", layout
-        )
-    }
 
 
 def equalize(panes, active, vertical):
@@ -139,13 +129,23 @@ def run(pane_id, action, socket=None):
     def tmux(*args):
         return subprocess.check_output(command + list(args), text=True).strip()
 
-    layout = tmux("display-message", "-p", "-t", pane_id, "#{window_layout}")
-    by_id = parse_panes(layout)
+    # #{window_layout} is JSON in tmux >= 3.8, so read pane geometry directly.
+    panes = []
+    for line in tmux(
+        "list-panes", "-t", pane_id,
+        "-F", "#{pane_id} #{pane_left} #{pane_top} #{pane_width} #{pane_height}",
+    ).splitlines():
+        pid, x, y, w, h = line.split()
+        panes.append(Pane(pid, int(x), int(y), int(w), int(h)))
+    by_id = {p.id: p for p in panes}
     # Pane index order is not necessarily the same as geometric order.
-    order = tmux("list-panes", "-t", pane_id, "-F", "#{pane_id}").splitlines()
-    panes = [by_id[pid] for pid in order]
+    order = [p.id for p in panes]
     active = by_id[pane_id]
-    width, height = map(int, re.match(r"[0-9a-f]+,(\d+)x(\d+)", layout).groups())
+    width, height = map(
+        int,
+        tmux("display-message", "-p", "-t", pane_id,
+             "#{window_width} #{window_height}").split(),
+    )
     if action in ("4", "5"):
         result = equalize(panes, active, vertical=action == "4")
     else:

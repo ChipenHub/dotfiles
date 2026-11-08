@@ -205,3 +205,13 @@ function kas
     end
 end
 abbr -a t 'tmux'
+
+if status is-login
+    if test -z "$DISPLAY" ; and test "$XDG_VTNR" -eq 1
+            exec startx
+            fcitx5 -d
+    end
+end
+
+# Pi
+fish_add_path "/home/Chipen/.pi/agent/bin"
