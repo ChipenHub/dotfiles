@@ -69,10 +69,14 @@ function __execute_with_nvim_default
 end
 bind \r __execute_with_nvim_default
 
+# tldr — read pages from local cache (offline, no network needed)
+# pages extracted from tldr-pages.en.zip / tldr-pages.zh.zip under ~/.cache/tldr
+set -Ux TLDR_PAGES_SOURCE_LOCATION "file:///home/Chipen/.cache/tldr/pages"
+
 # clear
 abbr -a c 'clear'
 
-# Chinese manpage
+# Chinese manpage /// deprecated
 abbr -a cman 'man -M /usr/local/share/man/zh_CN'
 
 # remove
