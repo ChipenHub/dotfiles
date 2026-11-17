@@ -18,7 +18,12 @@ local function publish_file_dir()
     end
 
     local name = vim.api.nvim_buf_get_name(0)
-    local dir = vim.bo.buftype == "" and name ~= "" and vim.fs.dirname(name) or ""
+    local dir = ""
+    if vim.bo.filetype == "oil" then
+        dir = require("oil").get_current_dir() or ""
+    elseif vim.bo.buftype == "" and name ~= "" then
+        dir = vim.fs.dirname(name)
+    end
     if dir ~= "" and vim.fn.isdirectory(dir) == 0 then
         dir = ""
     end
