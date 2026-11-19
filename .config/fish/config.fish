@@ -22,7 +22,7 @@ end
 abbr -a codex 'codex --yolo'
 
 # export proxy
-abbr -a proxy 'export http{,s}_proxy=http://127.0.0.1:7897'
+abbr -a proxy 'export http{,s}_proxy=http://127.0.0.1:'
 abbr -a unproxy 'set -e http_proxy https_proxy'
 
 # Use the local proxy only for Pi and its child processes.
