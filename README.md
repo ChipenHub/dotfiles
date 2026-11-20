@@ -209,6 +209,7 @@ Home links:
 `.config` links:
 
 - `fish`
+- `i3`
 - `karabiner`
 - `kitty`
 - `nnn`

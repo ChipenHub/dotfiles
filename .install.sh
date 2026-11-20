@@ -27,6 +27,7 @@ omp_links=(
 # 安装到 $HOME/.config 下的目标，对应仓库里的 .config/<name>。
 config_links=(
   fish
+  i3
   karabiner
   kitty
   nnn
