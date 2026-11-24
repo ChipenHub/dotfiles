@@ -44,8 +44,8 @@ bindsym XF86AudioMicMute exec --no-startup-id pactl set-source-mute @DEFAULT_SOU
 # Use Mouse+$mod to drag floating windows to their wanted position
 floating_modifier $mod
 
-# Make new windows float by default
-for_window [all] floating enable
+# Inherit floating/tiling from the window that opened a new window.
+exec_always --no-startup-id flock -w 2 "$(i3 --get-socketpath).inherit-layout.lock" python3 "$(dirname "$(readlink -f ~/.config/i3/config)")/inherit-window-layout.py"
 
 # move tiling windows via drag & drop by left-clicking into the title bar,
 # or left-clicking anywhere into the window while holding the floating modifier.
@@ -104,8 +104,8 @@ bindsym $mod+f fullscreen toggle
 bindsym $mod+w layout tabbed
 bindsym $mod+e layout toggle split
 
-# toggle tiling / floating
-bindsym $mod+Shift+space floating toggle
+# Size floating windows relative to the current output and center them.
+bindsym $mod+Shift+space floating toggle; [con_id=__focused__ floating] resize set 45 ppt 55 ppt, move position center
 
 # change focus between tiling / floating windows
 bindsym $mod+space focus mode_toggle
