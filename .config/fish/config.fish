@@ -221,4 +221,4 @@ fish_add_path "/home/Chipen/.pi/agent/bin"
 
 
 # Added by Antigravity CLI installer
-set -gx PATH "/home/Chipen/.local/bin" $PATH
+set -gx PATH "/Users/chipenjiang/.local/bin" $PATH
