@@ -21,9 +21,6 @@ end
 # codex default yolo
 abbr -a codex 'codex --yolo'
 
-# export proxy
-abbr -a proxy 'export http{,s}_proxy=http://127.0.0.1:'
-abbr -a unproxy 'set -e http_proxy https_proxy'
 
 # Use the local proxy only for Pi and its child processes.
 # function pi
@@ -219,6 +216,21 @@ end
 # Pi
 fish_add_path "/home/Chipen/.pi/agent/bin"
 
+set -l proxy_port
+switch (uname -s)
+    case Darwin
+        # Added by Antigravity CLI installer
+        set -gx PATH "/Users/chipenjiang/.local/bin" $PATH
+        set proxy_port 7897
+    case Linux
+        set -gx PATH "/home/Chipen/.local/bin" $PATH
+        set proxy_port 7890
+    case '*'
+        echo "are you kidding?"
+end
 
-# Added by Antigravity CLI installer
-set -gx PATH "/Users/chipenjiang/.local/bin" $PATH
+# Local proxy
+if set -q proxy_port[1]
+    abbr -a proxy "export http{,s}_proxy=http://127.0.0.1:$proxy_port"
+end
+abbr -a unproxy 'set -e http_proxy https_proxy'
