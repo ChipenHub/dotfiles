@@ -1,4 +1,0 @@
-interface:
-  display_name: "Reply Chinese to English"
-  short_description: "Answer English-language messages in Chinese"
-  default_prompt: "Use $always-reply-chinese to answer this English-language message in Chinese."
