@@ -52,23 +52,16 @@ class WordTests(unittest.TestCase):
             with self.subTest(text=text):
                 self.assertEqual(self.select(text, len(left) + 2, "iw"), "abc123")
 
-    def test_path_boundaries(self):
-        for punctuation in "：，。！？；、（）【】《》「」『』“”‘’…—﹐﹕﹙﹚":
-            text = f"你好{punctuation}/tmp/a_b.py:12{punctuation}其他"
-            with self.subTest(punctuation=punctuation):
-                self.assertEqual(self.select(text, 5, "ip"), "/tmp/a_b.py:12")
-        self.assertEqual(self.select("中文/tmp/foo", 4, "ip"), "/tmp/foo")
-        self.assertEqual(self.select("a\tb", 2, "ip"), "b")
-        self.assertEqual(self.select("a\u3000b", 2, "ip"), "b")
-
-    def test_path_line_ranges(self):
-        for location in ("xxx:88-99", "xxx:88–99", "src/foo.py#L88-L99", "src/foo.py#L88–L99"):
-            text = f"位置：{location}，后文"
-            for position in range(3, 3 + len(location)):
-                with self.subTest(location=location, position=position):
-                    self.assertEqual(self.select(text, position, "ip"), location)
-        self.assertEqual(self.select("xxx:88–后文", 1, "ip"), "xxx:88")
-        self.assertEqual(self.select("xxx:88–99", 5, "iw"), "88")
+    def test_inner_word_whitespace_delimited(self):
+        for text, position, expected in [
+            ("foo bar", 1, "foo"), ("foo bar", 5, "bar"),
+            ("/tmp/a_b.py:12", 5, "/tmp/a_b.py:12"),
+            ("你好：123_456，abc", 4, "你好：123_456，abc"),
+            ("a\tb", 2, "b"), ("a\u3000b", 2, "b"),
+            ("foo  bar", 3, "  "), ("foo\nbar", 4, "bar"),
+        ]:
+            with self.subTest(text=text, position=position):
+                self.assertEqual(self.select(text, position, "iW"), expected)
 
     def test_motion_destinations(self):
         text = "你好：123_456，abc"
@@ -91,7 +84,7 @@ class WordTests(unittest.TestCase):
                 if cell.y != row:
                     continue
                 full_cursor = full.index(cell)
-                for action in ["iw", "aw", "ip", "b", "e", "w"]:
+                for action in ["iw", "aw", "iW", "b", "e", "w"]:
                     with self.subTest(row=row, x=cell.x, action=action):
                         left, right = word.word_target(local, cursor, action)
                         full_left, full_right = word.word_target(full, full_cursor, action)
@@ -318,53 +311,16 @@ class TmuxTests(unittest.TestCase):
         self.load("foo  bar", column=6)
         self.assertEqual(self.selection("aw"), "  bar")
 
-    @unittest.skipUnless(shutil.which("ov"), "ov is required")
-    def test_s_opens_git_show_with_ov_and_closes_on_quit(self):
-        self.test_s_opens_git_show_window_and_closes_on_quit(pager="ov")
+    def test_whitespace_delimited_word_selection(self):
+        self.load("xx /tmp/a_b.py:12 yy", column=5)
+        self.assertEqual(self.selection("iW"), "/tmp/a_b.py:12")
 
-    def test_s_opens_git_show_window_and_closes_on_quit(self, pager="less -R"):
-        revision = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], text=True).strip()
-        self.load(f"({revision}),", column=3)
-        self.tmux("set-environment", "-g", "GIT_PAGER", pager)
-        before = set(self.tmux("list-windows", "-F", "#{window_id}").splitlines())
-        try:
-            with self.attached_client() as client:
-                self.tmux("send-keys", "-c", client, "-K", "s")
-                for _ in range(100):
-                    created = set(self.tmux("list-windows", "-F", "#{window_id}").splitlines()) - before
-                    if created:
-                        break
-                    time.sleep(0.02)
-                self.assertEqual(len(created), 1, "s did not create a window")
-                window = created.pop()
-                for _ in range(100):
-                    output = self.tmux("capture-pane", "-p", "-t", window)
-                    if "commit " in output:
-                        break
-                    time.sleep(0.02)
-                self.assertIn("commit ", output)
-                self.assertEqual(self.tmux("display-message", "-p", "-c", client, "#{window_id}").strip(), window)
-                self.tmux("send-keys", "-t", window, "q")
-                for _ in range(100):
-                    if window not in self.tmux("list-windows", "-F", "#{window_id}").splitlines():
-                        break
-                    time.sleep(0.02)
-                self.assertNotIn(window, self.tmux("list-windows", "-F", "#{window_id}").splitlines())
-        finally:
-            self.tmux("set-environment", "-gu", "GIT_PAGER")
-            for window in set(self.tmux("list-windows", "-F", "#{window_id}").splitlines()) - before:
-                self.tmux("kill-window", "-t", window)
-
-    def test_path_selection(self):
-        self.load("路径：/tmp/a_b.py:12，后文", column=7)
-        self.assertEqual(self.selection("ip"), "/tmp/a_b.py:12")
-
-    def test_real_keys_select_unicode_line_range(self):
+    def test_real_keys_select_word(self):
         text = "src/foo.py:88–99"
         self.load(text, column=3)
         with self.attached_client() as client:
             end = len(text) - 1
-            self.assert_key_selection(client, ["v", "i", "p"], f"{end},0,0,0,{end},0,0,1")
+            self.assert_key_selection(client, ["v", "i", "W"], f"{end},0,0,0,{end},0,0,1")
             self.send("copy-selection-no-clear")
             self.assertEqual(self.tmux("show-buffer"), text)
 
@@ -380,7 +336,7 @@ class TmuxTests(unittest.TestCase):
         text = "\t.config/tmux/copy_mode_word.py"
         self.load(text, column=text.index("word") + 1)
         self.assertEqual(self.selection("iw"), "word")
-        self.assertEqual(self.selection("ip"), text[1:])
+        self.assertEqual(self.selection("iW"), text[1:])
 
     def test_tab_prefixed_objects_after_resize_refresh(self):
         text = "\t.config/tmux/copy_mode_word.py"
@@ -393,7 +349,7 @@ class TmuxTests(unittest.TestCase):
             time.sleep(0.01)
         self.assertEqual(pending, "0")
         self.assertEqual(self.selection("iw"), "word")
-        self.assertEqual(self.selection("ip"), text[1:])
+        self.assertEqual(self.selection("iW"), text[1:])
 
     def test_real_keys_on_tab_prefixed_path(self):
         text = "\t.config/tmux/copy_mode_word.py"
@@ -405,7 +361,7 @@ class TmuxTests(unittest.TestCase):
                     break
                 time.sleep(0.01)
             self.assertEqual(self.cursor(), "8,0,0")
-            for keys, expected in [(["v", "i", "p", "y"], text[1:]),
+            for keys, expected in [(["v", "i", "W", "y"], text[1:]),
                                    (["v", "i", "w", "y"], "py")]:
                 self.tmux("set-buffer", "pending")
                 self.tmux("send-keys", "-c", client, "-K", *keys)
@@ -495,13 +451,13 @@ class TmuxTests(unittest.TestCase):
                     ).strip()
                     self.assertEqual(state, "1 0")
 
-    def test_yank_path_copies_and_returns_to_path_start(self):
+    def test_yank_word_copies_and_returns_to_word_start(self):
         text = "xx /tmp/a_b.py:12 yy"
         start = text.index("/")
         self.load(text, column=text.index("a_b") + 1)
         with self.attached_client() as client:
             self.tmux("set-buffer", "pending")
-            self.tmux("send-keys", "-c", client, "-K", "y", "i", "p")
+            self.tmux("send-keys", "-c", client, "-K", "y", "i", "W")
             for _ in range(100):
                 if self.tmux("show-buffer") == "/tmp/a_b.py:12":
                     break
@@ -635,7 +591,7 @@ class TmuxTests(unittest.TestCase):
                 time.sleep(0.01)
             self.assertEqual(self.tmux("show-buffer"), "123")
             self.assertEqual(self.tmux("display-message", "-p", "-c", name, "#{client_key_table}").strip(), "root")
-            for keys, expected in [(["v", "a", "w", "y"], "123"), (["v", "i", "p", "y"], "123_456")]:
+            for keys, expected in [(["v", "a", "w", "y"], "123"), (["v", "i", "W", "y"], "你好：123_456")]:
                 self.tmux("set-buffer", "pending")
                 self.tmux("send-keys", "-c", name, "-K", *keys)
                 for _ in range(100):
@@ -653,10 +609,10 @@ class TmuxTests(unittest.TestCase):
                     time.sleep(0.01)
                 self.assertEqual(int(self.cursor().split(",")[0]), expected, keys)
 
-    def test_path_selection_does_not_mutate_global_separators(self):
+    def test_word_selection_does_not_mutate_global_separators(self):
         self.load("你好：/a_b：/c_d", column=4)
         separators = self.tmux("show-options", "-gv", "word-separators")
-        self.assertEqual(self.selection("ip"), "/a_b")
+        self.assertEqual(self.selection("iW"), "你好：/a_b：/c_d")
         self.assertEqual(self.tmux("show-options", "-gv", "word-separators"), separators)
 
 

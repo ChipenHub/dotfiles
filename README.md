@@ -42,7 +42,7 @@ Based on `.tmux.conf`. `Prefix` = `Ctrl+s`, followed by the next key within **50
 | Current pane on the right (80% width), others equally stacked on the left | `Space` | `Alt+Space` |
 | Move the 1st / 2nd / 3rd left pane below the main pane (20% height) | `1` / `2` / `3` | — |
 | Equalize heights in the current column / widths in the current row | `4` / `5` | — |
-| Open the selected/cursor path in a pane chosen by number | — | `Shift+Enter` |
+| Yank the whitespace-delimited WORD under the cursor (like Vim's `yiW`) | — | `Shift+Enter` |
 | Split top/bottom; new bottom pane gets 20% | `s` | `Alt+s` |
 | Split left/right | `v` | `Alt+v` |
 | Close current pane | `x` | `Alt+x` |
@@ -81,13 +81,13 @@ All keys below are pressed **without the prefix** while in copy mode.
 | `[` / `]` | Previous / next paragraph |
 | `/` / `?` | Search backward (older history) / forward (newer output) |
 | `n` / `N` | Repeat search / search in the opposite direction |
-| `Esc` | Cancel path search and clear selection; stay in copy mode |
+| `Esc` | Clear selection; stay in copy mode |
 | `q` | Exit copy mode |
 | `Alt+x` | Close the current tmux pane and its process, not just copy mode |
 
 Scrolling up with the mouse enters copy mode in normal shell output; alternate-screen or mouse-aware applications may handle scrolling themselves.
 
-### Copy mode: selection, copying, and path jumping
+### Copy mode: selection and copying
 
 | Keys | Action |
 | --- | --- |
@@ -96,23 +96,21 @@ Scrolling up with the mouse enters copy mode in normal shell output; alternate-s
 | `A` | Append to selection |
 | `d` or `Ctrl+c` | Clear selection |
 | `viw` / `vaw` | Select word / word with adjacent whitespace |
-| `vip` | Select path (not a paragraph) |
+| `viW` | Select a whitespace-delimited WORD (Vim's `iW`) |
 | `vi"` / `va"` | Select inside / around quotes; single quotes and backticks also work |
 | `vi(` / `va(` | Select inside / around a balanced block; either bracket of `()`, `[]`, `{}`, `<>` works; `b` / `B` alias parentheses / braces |
 | `y` | Copy active selection, staying in copy mode |
 | `yy` | With no selection, copy current line |
-| `yiw` / `yaw` / `yip` | With no selection, copy word / word with whitespace / path |
+| `yiw` / `yaw` / `yiW` | With no selection, copy word / word with whitespace / WORD |
 | `yi"` / `ya"`, `yi(` / `ya(` | With no selection, copy inside / around quotes or blocks; same variants as selection |
 | `D` | Copy through end of line |
 | `Ctrl+j` | Copy selection without clearing it |
 | `p` | Paste tmux buffer |
-| `Shift+Enter` | Open the same path as `Enter`, but in a pane chosen by number |
-| `Enter` | Open selected path, or path under cursor, in full-window Neovim |
-| `s` | Open `git show` for the hexadecimal commit hash under cursor in a temporary window |
+| `Shift+Enter` | Copy the whitespace-delimited WORD under the cursor (same as `yiW`) |
 | Mouse drag / double-click / triple-click | Copy selection / word / line; clear highlight and stay in copy mode |
 | Single click | Clear selection and move cursor to clicked cell |
 
-Word objects split on punctuation (including `_`) and individual Han characters; path objects retain ASCII punctuation such as `/._:`. Operator yanks (`yy`, `yi…`, `ya…`) stay in copy mode and return the cursor to the first copied character.
+Word objects split on punctuation (including `_`) and individual Han characters; `W` objects treat every non-blank character as one WORD. Operator yanks (`yy`, `yi…`, `ya…`) stay in copy mode and return the cursor to the first copied character.
 
 ## Neovim shortcut cheat sheet
 
@@ -235,45 +233,7 @@ are not copied. OMP's temporary model picker (`Alt+P`) remains available.
 and are excluded from Git. Restart OMP after installation to load the bindings
 and shared extensions.
 
-## Open paths in a chosen tmux pane
-
-`Shift+Enter` uses the same selection, cursor-path detection, source working directory, path search, and line/column handling as `Enter`. After resolving the path (and choosing among duplicate matches if needed), it displays pane numbers. Press a number to open the real file or directory in that pane; `Esc` cancels. It creates no window or pane and leaves the layout unchanged.
-
-An existing foreground Neovim in the chosen pane is reused. Otherwise, an interactive fish shell launches Neovim with your normal configuration, plugins, and keybindings. A busy foreground job receives `Ctrl+Z` so terminal applications can prepare their suspend/resume handlers, then resumes with `fg <PID>` when Neovim exits, including a startup failure. The destination leaves copy mode and any unfinished shell input is cancelled before launching the editor. Unsupported destinations produce an English `open-path: Cannot open in this pane: ...` message in the tmux status line.
-
-Path handling lives in `.config/tmux/open-path`; `.config/tmux/copy-mode-enter` handles opening inside the destination pane. The ordinary `Enter` behavior is unchanged.
-
-## tmux path jump
-
-Relevant files:
-
-- `.tmux.conf`
-- `.config/tmux/open-path`
-- `.config/tmux/copy-mode-git-show`
-- `.config/tmux/copy_mode_word.py`
-- `.config/nvim/lua/config/tmux.lua`
-
-### Usage
-
-1. Enter tmux copy mode with `Esc`, `Enter`, or mouse wheel scroll.
-2. Move the copy cursor onto a path, or select a path with `v` / mouse drag.
-3. Press `vip` to select the path without opening it, or `Enter` to open it in a full-window Neovim, reusing one in the current session when possible.
-4. Press `s` on a Git revision to run `git show` in a new window; leaving the command closes the window.
-5. Press `Esc` to cancel an active search or selection; press `q` to exit copy mode.
-
-### Behavior
-
-- Accepts `file`, `dir/file`, `file:12`, `file:12:3`, `file(12,3)`, and `file#L12`.
-- Resolves existing paths relative to the source pane's current directory.
-- If the direct path does not exist, searches from the Git root.
-- Ignores `.git`, `.cache`, and `node_modules` during fallback search.
-- If multiple matches exist, opens an `fzf` chooser in a tmux popup.
-- `Enter` reuses and switches to the only live Neovim pane that occupies an entire window in the current session.
-- Otherwise it creates a new tmux window.
-- Directories open through Oil when reusing an existing Neovim server.
-- Search status appears in tmux status-right.
-
-### Copy-mode helpers
+## Copy-mode helpers
 
 - `Alt+u` / `Alt+d` enter copy mode and scroll up / down half a page. In a pane running Pi, tmux passes these keys through to Pi instead.
 - `H` / `M` / `L` move to 15% / 50% / 85% of the visible pane.
@@ -281,14 +241,11 @@ Relevant files:
 - `b` / `e` / `w` use Vim-style word boundaries, with `_` as punctuation and each Han character or Chinese punctuation mark as a separate unit. Numeric prefixes such as `3w` work too.
 - `viw` selects the current word, punctuation unit, or whitespace run.
 - `vaw` includes trailing whitespace, or preceding whitespace when there is no trailing whitespace (excluding indentation).
+- `viW` selects a whitespace-delimited WORD: every non-blank character up to the next space or newline, regardless of punctuation.
 - `vi"` / `va"` select inside / around quotes, respecting backslash escapes. Single quotes and backticks work too.
 - `vi(` / `va)` select inside / around nested, multiline blocks. Either bracket in `()`, `[]`, `{}` or `<>` works; `b` / `B` alias parentheses / braces.
 - Text objects select forward and retain rectangle mode. `C-v` toggles rectangle selection with the cursor on the right edge; `j` / `k` keep its columns across short lines and wide Chinese characters.
-- `vip` selects a path: ASCII punctuation such as `/._:` stays inside it; whitespace, Han characters and Chinese punctuation split it. This is a custom path object, not Vim's paragraph object.
-- `Enter` without a selection selects the same path object and opens it.
-- `s` selects the current word, stopping at punctuation (including `_`, `-` and `/`), and accepts only 4–64 hexadecimal characters (a commit hash or abbreviation). It opens `git show <revision>` in a new tmux window, which closes when the command exits.
-- `y` copies an active visual selection. Without one, Vim-style yanks such as `yy`, `yiw`, `yip`, `yi(`, `ya(`, and their quote/bracket variants copy without leaving copy mode, then return the cursor to the first copied character. `p` pastes and `q` cancels copy mode.
-- `:` opens a one-line command prompt and runs the command in a temporary pane occupying the bottom 30%. Commands lasting at least three seconds close with the pane when they exit; quicker results wait for any key so they remain readable.
+- `y` copies an active visual selection. Without one, Vim-style yanks such as `yy`, `yiw`, `yiW`, `yi(`, `ya(`, and their quote/bracket variants copy without leaving copy mode, then return the cursor to the first copied character. `p` pastes and `q` cancels copy mode. `Shift+Enter` also copies the WORD under the cursor.
 - Layout changes (prefix `Space`, pane resizing, or terminal resizing) refresh every resized copy-mode pane, focused or not, after **300ms** without another layout change. Tracking uses hidden environment variables to avoid global redraws; stale timers do not start workers.
 - `.config/tmux/refresh_copy_mode.py` records the cursor's x/y and the frozen page's absolute history row **at refresh time**, exits and re-enters copy mode, then restores that row without switching focus. With history retained, appended output does not move the page. Positions are clamped when necessary. It does not match text, preserve selections, or restore a pre-resize content anchor. Output arriving after this one-shot refresh remains frozen.
 
@@ -320,7 +277,7 @@ Core behavior:
 - Leader is Space.
 - Uses `lazy.nvim`.
 - Uses tags and ripgrep for navigation rather than an LSP-heavy workflow.
-- Registers `@nvim_server` in tmux so path jump can reuse live Neovim panes; this is separate from the smart-splits foreground marker.
+- Publishes the current file's directory to tmux (`@nvim_file_dir`) so new splits and windows inherit it.
 - Clipboard uses OSC52.
 - Oil is the default file explorer; open parent directory with `-`.
 - Toggle floating terminal with `C-\`.

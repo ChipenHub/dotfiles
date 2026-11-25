@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""Unicode-aware Vim word motions and path text objects for tmux copy mode."""
+"""Unicode-aware Vim word motions and text objects for tmux copy mode."""
 
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ class Cell:
     column: int  # Number of cursor-right commands from this physical row's start.
 
 
-def character_kind(char: str, path: bool = False) -> str:
+def character_kind(char: str) -> str:
     if char == "\n":
         return "newline"
     if char.isspace():
@@ -42,7 +42,7 @@ def character_kind(char: str, path: bool = False) -> str:
             or (ord(char) > 127 and category.startswith("P"))
             or (category.startswith("S") and unicodedata.east_asian_width(char) in "WF")):
         return "single"
-    if path or char.isalnum() or category.startswith("M"):
+    if char.isalnum() or category.startswith("M"):
         return "word"
     return "symbol"
 
@@ -101,16 +101,14 @@ def cells_from_capture(
     return cells, line_starts
 
 
-def word_spans(cells: list[Cell], path: bool = False) -> list[tuple[int, int, str]]:
+def word_spans(cells: list[Cell], word: bool = False) -> list[tuple[int, int, str]]:
     spans = []
     for index, cell in enumerate(cells):
-        kind = character_kind(cell.text[0], path)
-        if path and cell.text == "–" and index > 0 and cells[index - 1].text.isdigit():
-            following = index + 1
-            if following < len(cells) and cells[following].text == "L":
-                following += 1
-            if following < len(cells) and cells[following].text.isdigit():
-                kind = "word"
+        if word:
+            text = cell.text[0]
+            kind = "newline" if text == "\n" else ("space" if text.isspace() else "word")
+        else:
+            kind = character_kind(cell.text[0])
         if spans and kind == spans[-1][2] and kind not in {"single", "newline"}:
             start, _, _ = spans[-1]
             spans[-1] = (start, index + 1, kind)
@@ -121,7 +119,7 @@ def word_spans(cells: list[Cell], path: bool = False) -> list[tuple[int, int, st
 
 def word_target(cells: list[Cell], cursor: int, action: str, count: int = 1) -> tuple[int, int]:
     """Return inclusive selection bounds, or a single motion destination."""
-    spans = word_spans(cells, action == "ip")
+    spans = word_spans(cells, action == "iW")
     current = next(i for i, (start, end, _) in enumerate(spans) if start <= cursor < end)
     start, end, kind = spans[current]
     if action in {"b", "e", "w"}:
@@ -291,7 +289,7 @@ def run(pane: str, action: str) -> None:
             send("cursor-right", count=cell.column)
         y = cell.y
 
-    if pair or action in {"iw", "aw", "ip"}:
+    if pair or action in {"iw", "aw", "iW"}:
         send("clear-selection")
         move(start)
         send("begin-selection")
@@ -314,7 +312,7 @@ def run(pane: str, action: str) -> None:
 
 
 if __name__ == "__main__":
-    actions = {"b", "e", "w", "iw", "aw", "ip", "yank-line"}
+    actions = {"b", "e", "w", "iw", "aw", "iW", "yank-line"}
     actions.update(prefix + name for prefix in ("i-", "a-") for name in PAIRS)
     actions.update("yank-" + action for action in tuple(actions) if action.startswith(("i", "a")))
     if len(sys.argv) != 3 or sys.argv[2] not in actions:
