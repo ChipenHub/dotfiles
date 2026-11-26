@@ -1,0 +1,8 @@
+{
+  "navigation.half_page_up": ["shift+up", "alt+u"],
+  "navigation.half_page_down": ["shift+down", "alt+d"],
+  "navigation.up": ["up", "ctrl+p"],
+  "navigation.down": ["down", "ctrl+n"],
+  "prompt.insert_newline": ["shift+enter", "ctrl+j"],
+  "subagent.approve_fast": []
+}

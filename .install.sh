@@ -10,6 +10,7 @@ home_links=(
   .claude
   .pi
   .omp
+  .gemini
   .hammerspoon
   .tmux.conf
   .vimrc
@@ -22,6 +23,12 @@ omp_links=(
   .omp/agent/keybindings.yml
   .omp/agent/skills
   .omp/agent/extensions
+)
+
+# Antigravity keeps credentials and runtime state in ~/.gemini; link only managed configuration.
+gemini_links=(
+  .gemini/antigravity-cli/keybindings.json
+  .gemini/config/skills
 )
 
 # 安装到 $HOME/.config 下的目标，对应仓库里的 .config/<name>。
@@ -79,6 +86,7 @@ if [ "$#" -ne 1 ] || [ "$1" != all ]; then
       if [ "$target" = "$key" ]; then
         paths=("$name")
         [ "$name" != .omp ] || paths=("${omp_links[@]}")
+        [ "$name" != .gemini ] || paths=("${gemini_links[@]}")
         for path in "${paths[@]}"; do
           if [ -e "$HOME/$path" ] || [ -L "$HOME/$path" ]; then
             if [ ! -L "$HOME/$path" ] || [ "$(readlink "$HOME/$path")" != "$dotfiles_dir/$path" ]; then
@@ -160,9 +168,9 @@ regex_escape() {
 }
 
 
-# OMP uses the same explicit leaf links for named and full installs.
-# Its absolute links and local runtime state must not be managed by Stow.
-ignore_args=(--ignore='^\.omp($|/)')
+# OMP and Antigravity use the same explicit leaf links for named and full installs.
+# Their absolute links and local runtime state must not be managed by Stow.
+ignore_args=(--ignore='^\.omp($|/)' --ignore='^\.gemini($|/)')
 if [ "${#config_links[@]}" -eq 0 ]; then
   ignore_args+=(--ignore='^\.config($|/)')
 fi
@@ -218,6 +226,6 @@ stow \
   "${ignore_args[@]}" \
   .
 
-bash "$dotfiles_dir/.install.sh" omp
+bash "$dotfiles_dir/.install.sh" omp gemini
 
 install_git_include

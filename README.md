@@ -73,7 +73,7 @@ All keys below are pressed **without the prefix** while in copy mode.
 
 | Keys | Action |
 | --- | --- |
-| `Alt+u` / `Alt+d` | Scroll up / down half a page; also enter copy mode from normal mode (passed through to Pi instead when Pi is running in the pane) |
+| `Alt+u` / `Alt+d` | Scroll up / down half a page; also enter copy mode from normal mode (passed through to Pi and Antigravity CLI instead when running in the pane) |
 | `h` / `j` / `k` / `l` | Move cursor left / down / up / right |
 | `Ctrl+a` / `Ctrl+e` | Start / end of line |
 | `H` / `M` / `L` | Move to roughly 15% / 50% / 85% of the visible pane |
@@ -187,6 +187,7 @@ Run from the repo root:
 ./.install.sh              # List available targets without installing
 ./.install.sh hammerspoon  # Install only Hammerspoon
 ./.install.sh omp          # Link OMP keybindings and shared skills/extensions only
+./.install.sh gemini       # Link Antigravity keybindings and shared skills only
 ./.install.sh tmux fish    # Install selected targets
 ./.install.sh all          # Install / refresh the full whitelist
 ```
@@ -199,6 +200,7 @@ Home links:
 - `.claude`
 - `.pi`
 - `.omp` (only the three managed entries below, for both `omp` and `all`)
+- `.gemini` (only the two managed entries below, for both `gemini` and `all`)
 - `.hammerspoon`
 - `.tmux.conf`
 - `.emacs`
@@ -233,9 +235,61 @@ are not copied. OMP's temporary model picker (`Alt+P`) remains available.
 and are excluded from Git. Restart OMP after installation to load the bindings
 and shared extensions.
 
-## Copy-mode helpers
+## Antigravity
 
-- `Alt+u` / `Alt+d` enter copy mode and scroll up / down half a page. In a pane running Pi, tmux passes these keys through to Pi instead.
+Antigravity follows `.pi` and `.omp`: `.gemini/antigravity-cli/keybindings.json`
+maps `Alt+u/d` half-page scrolling, `Ctrl+P/N` list navigation, and `Ctrl+J`
+newlines while unbinding `subagent.approve_fast` so `Ctrl+K` stays delete-to-end;
+`.gemini/config/skills` links to `.agents/skills`. `./.install.sh gemini` links
+these two entries into `~/.gemini` without replacing local directories, and
+`./.install.sh all` excludes `.gemini` from Stow and runs the same `gemini`
+installer.
+
+`settings.json` (such as `altScreenMode: "always"` and `showThinking: false`),
+OAuth credentials, conversations, databases, caches, and logs remain local and
+are excluded from Git.
+
+## Open paths in a chosen tmux pane
+
+`Shift+Enter` uses the same selection, cursor-path detection, source working directory, path search, and line/column handling as `Enter`. After resolving the path (and choosing among duplicate matches if needed), it displays pane numbers. Press a number to open the real file or directory in that pane; `Esc` cancels. It creates no window or pane and leaves the layout unchanged.
+
+An existing foreground Neovim in the chosen pane is reused. Otherwise, an interactive fish shell launches Neovim with your normal configuration, plugins, and keybindings. A busy foreground job receives `Ctrl+Z` so terminal applications can prepare their suspend/resume handlers, then resumes with `fg <PID>` when Neovim exits, including a startup failure. The destination leaves copy mode and any unfinished shell input is cancelled before launching the editor. Unsupported destinations produce an English `open-path: Cannot open in this pane: ...` message in the tmux status line.
+
+Path handling lives in `.config/tmux/open-path`; `.config/tmux/copy-mode-enter` handles opening inside the destination pane. The ordinary `Enter` behavior is unchanged.
+
+## tmux path jump
+
+Relevant files:
+
+- `.tmux.conf`
+- `.config/tmux/open-path`
+- `.config/tmux/copy-mode-git-show`
+- `.config/tmux/copy_mode_word.py`
+- `.config/nvim/lua/config/tmux.lua`
+
+### Usage
+
+1. Enter tmux copy mode with `Esc`, `Enter`, or mouse wheel scroll.
+2. Move the copy cursor onto a path, or select a path with `v` / mouse drag.
+3. Press `vip` to select the path without opening it, or `Enter` to open it in a full-window Neovim, reusing one in the current session when possible.
+4. Press `s` on a Git revision to run `git show` in a new window; leaving the command closes the window.
+5. Press `Esc` to cancel an active search or selection; press `q` to exit copy mode.
+
+### Behavior
+
+- Accepts `file`, `dir/file`, `file:12`, `file:12:3`, `file(12,3)`, and `file#L12`.
+- Resolves existing paths relative to the source pane's current directory.
+- If the direct path does not exist, searches from the Git root.
+- Ignores `.git`, `.cache`, and `node_modules` during fallback search.
+- If multiple matches exist, opens an `fzf` chooser in a tmux popup.
+- `Enter` reuses and switches to the only live Neovim pane that occupies an entire window in the current session.
+- Otherwise it creates a new tmux window.
+- Directories open through Oil when reusing an existing Neovim server.
+- Search status appears in tmux status-right.
+
+### Copy-mode helpers
+
+- `Alt+u` / `Alt+d` enter copy mode and scroll up / down half a page. In a pane running Pi or Antigravity CLI, tmux passes these keys through instead.
 - `H` / `M` / `L` move to 15% / 50% / 85% of the visible pane.
 - `[` / `]` move by paragraph, matching `{` / `}`.
 - `b` / `e` / `w` use Vim-style word boundaries, with `_` as punctuation and each Han character or Chinese punctuation mark as a separate unit. Numeric prefixes such as `3w` work too.
@@ -305,4 +359,4 @@ Enable Hammerspoon in **System Settings → Privacy & Security → Accessibility
 - fish sets `EDITOR` and `VISUAL` to `nvim`.
 - fish abbreviations include `b -> nvim`; bare `b` or `nvim` opens the current directory. Other abbreviations include `cd -> z`, `find -> fd`, `s/ss/l -> eza`, and common git shortcuts.
 - `nnn` uses `.config/nnn/opener` so editable files stay in terminal Neovim, images preview with `chafa`, and videos do not accidentally open externally.
-- Karabiner, Emacs, Pi/OMP/Codex/Claude agent configs are tracked too, but they are secondary to the tmux + Neovim workflow.
+- Karabiner, Emacs, Pi/OMP/Antigravity/Codex/Claude agent configs are tracked too, but they are secondary to the tmux + Neovim workflow.

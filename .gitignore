@@ -22,6 +22,15 @@
 !.omp/agent/skills
 !.omp/agent/extensions
 
+# Antigravity: track keybindings and shared skills, not credentials or runtime state
+.gemini/*
+!.gemini/antigravity-cli/
+.gemini/antigravity-cli/*
+!.gemini/antigravity-cli/keybindings.json
+!.gemini/config/
+.gemini/config/*
+!.gemini/config/skills
+
 # Generated caches and local artifacts
 .DS_Store
 .cache/
